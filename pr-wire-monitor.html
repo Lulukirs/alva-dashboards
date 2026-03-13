@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PR Wire Catalyst Monitor — Alva</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+@font-face{font-family:'Delight';src:url('./Delight-Regular.ttf') format('truetype');font-weight:400;font-style:normal}
+@font-face{font-family:'Delight';src:url('./Delight-Medium.ttf') format('truetype');font-weight:500;font-style:normal}
+
+:root{
+  --text-n9:rgba(0,0,0,.9);--text-n7:rgba(0,0,0,.7);--text-n5:rgba(0,0,0,.5);--text-n3:rgba(0,0,0,.3);--text-n2:rgba(0,0,0,.2);
+  --main-m1:#49a3a6;--main-m2:#2196f3;--main-m3:#2a9b7d;--main-m3-10:rgba(42,155,125,.1);--main-m4:#e05357;--main-m4-10:rgba(224,83,87,.1);
+  --main-m5:#e6a91a;--main-m5-10:rgba(230,169,26,.1);--main-m6:#ff9800;--main-m6-10:rgba(255,152,0,.1);
+  --b0-page:#ffffff;--grey-g01:#fafafa;--b-r02:rgba(0,0,0,.02);--b-r03:rgba(0,0,0,.03);
+  --line-l07:rgba(0,0,0,.07);--line-l05:rgba(0,0,0,.05);--line-l12:rgba(0,0,0,.12);--line-l2:rgba(0,0,0,.2);--line-l3:rgba(0,0,0,.3);
+  --shadow-xs:0 4px 15px 0 rgba(0,0,0,.05);--shadow-s:0 6px 20px 0 rgba(0,0,0,.04);--shadow-l:0 10px 20px 0 rgba(0,0,0,.08);
+  --spacing-xs:8px;--spacing-s:12px;--spacing-m:16px;--spacing-l:20px;--spacing-xl:24px;--spacing-xxl:28px;
+  --radius-ct-xs:2px;--radius-ct-s:4px;--radius-ct-m:6px;--radius-ct-l:8px;
+  --chart-blue1:#3d8bd1;--chart-green1:#40a544;--chart-orange1:#ff9800;--chart-purple1:#5f75c9;--chart-red1:#c76466;--chart-cyan1:#117a7d;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Delight',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--b0-page);color:var(--text-n9);
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-size:14px;line-height:22px;letter-spacing:.14px}
+a{color:var(--main-m2);text-decoration:none}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--line-l12);border-radius:3px}
+
+.page-header{padding:var(--spacing-l) var(--spacing-xl);display:flex;align-items:center;gap:var(--spacing-m);flex-wrap:wrap;border-bottom:1px solid var(--line-l07)}
+.page-header h1{font-size:18px;font-weight:500;line-height:28px;letter-spacing:.18px;white-space:nowrap;display:flex;align-items:center;gap:var(--spacing-xs)}
+.alva-logo{display:inline-flex;align-items:center;gap:6px}
+.alva-logo svg{vertical-align:middle}
+.conn-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.conn-dot.on{background:var(--main-m3)}.conn-dot.off{background:var(--main-m4)}
+.header-stats{display:flex;gap:var(--spacing-s);flex:1;justify-content:center}
+.header-stat{text-align:center;min-width:100px}
+.header-stat .lbl{font-size:11px;color:var(--text-n5);text-transform:uppercase;letter-spacing:.5px}
+.header-stat .val{font-size:24px;font-weight:400;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:var(--spacing-xs)}
+.market-info{text-align:right;white-space:nowrap}
+.market-info .et{font-size:12px;color:var(--text-n5)}
+.mkt-badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:var(--radius-ct-xs);margin-left:6px}
+.mkt-badge.pre{background:var(--main-m5-10);color:var(--main-m5)}.mkt-badge.open{background:var(--main-m3-10);color:var(--main-m3)}
+.mkt-badge.after{background:rgba(95,117,201,.1);color:var(--chart-purple1)}.mkt-badge.closed{background:var(--b-r03);color:var(--text-n5)}
+
+.lang-toggle{display:flex;border:.5px solid var(--line-l3);border-radius:var(--radius-ct-s);overflow:hidden}
+.lang-btn{padding:3px 10px;font-size:11px;font-weight:400;cursor:pointer;background:transparent;border:none;color:var(--text-n5);font-family:inherit;transition:.15s;letter-spacing:.11px}
+.lang-btn.active{background:var(--main-m1);color:#fff}
+
+.nav-tabs{display:flex;gap:var(--spacing-xl);padding:0 var(--spacing-xl);border-bottom:1px solid var(--line-l07)}
+.nav-tab{padding:var(--spacing-s) 0;font-size:14px;font-weight:400;color:var(--text-n5);cursor:pointer;border-bottom:2px solid transparent;transition:.2s;letter-spacing:.14px}
+.nav-tab:hover{color:var(--text-n9)}.nav-tab.active{color:var(--main-m1);border-bottom-color:var(--main-m1);font-weight:500}
+
+.module{display:none;padding:var(--spacing-xl)}.module.active{display:block}
+
+.widget-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:var(--spacing-xl);align-items:stretch}
+.col-2{grid-column:span 2}.col-3{grid-column:span 3}.col-4{grid-column:span 4}.col-5{grid-column:span 5}.col-6{grid-column:span 6}.col-8{grid-column:span 8}
+@media(max-width:768px){.widget-grid{grid-template-columns:repeat(4,1fr);gap:var(--spacing-m)}.col-2{grid-column:span 2}.col-3,.col-4,.col-5,.col-6,.col-8{grid-column:span 4}}
+
+.widget-card{background:transparent;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.widget-title{display:flex;align-items:center;justify-content:space-between;height:22px;margin-bottom:var(--spacing-m)}
+.widget-title-text{font-size:14px;font-weight:400;color:var(--text-n9);letter-spacing:.14px;line-height:22px}
+.widget-timestamp{font-size:12px;color:var(--text-n5);line-height:20px}
+
+.chart-dotted-bg{background-color:#fff;background-image:radial-gradient(circle,rgba(0,0,0,.18) .6px,transparent .6px);background-size:3px 3px;border-radius:var(--radius-ct-s);padding:var(--spacing-m);flex:1;min-height:180px;position:relative}
+.kpi-bg{background:var(--grey-g01);border-radius:var(--radius-ct-s);padding:var(--spacing-l)}
+.feed-bg{background:var(--grey-g01);border-radius:var(--radius-ct-s);position:relative}
+
+.alva-watermark{position:absolute;bottom:var(--spacing-m);left:var(--spacing-m);opacity:.15;line-height:0;pointer-events:none}
+.alva-watermark svg{display:block}
+
+.alva-data-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-n3);letter-spacing:.1px}
+.alva-data-badge svg{opacity:.4}
+
+.filter-bar{display:flex;gap:var(--spacing-xs);flex-wrap:wrap;align-items:center;margin-bottom:var(--spacing-l)}
+.alva-select{background:#fff;border:.5px solid var(--line-l3);border-radius:var(--radius-ct-s);padding:4px 12px;font-size:12px;line-height:20px;letter-spacing:.12px;
+  color:var(--text-n9);font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10.066 4.533c.318-.376.035-.933-.474-.933H2.408c-.509 0-.792.557-.474.933l3.592 4.251a.6.6 0 00.948 0l3.592-4.251z' fill='rgba(0,0,0,0.2)'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;background-size:10px;padding-right:24px}
+.alva-select:hover{border-color:var(--text-n9)}
+
+.signal-list{display:flex;flex-direction:column}
+.signal-card{padding:var(--spacing-m) var(--spacing-l);position:relative;transition:background .15s}
+.signal-card:hover{background:var(--b-r02)}
+.signal-card::after{content:'';position:absolute;bottom:0;left:var(--spacing-l);right:var(--spacing-l);height:1px;background:var(--line-l05)}
+.signal-card:last-child::after{display:none}
+.sc-row{display:flex;align-items:center;gap:var(--spacing-xs);margin-bottom:4px;flex-wrap:wrap}
+.sc-row:last-child{margin-bottom:0}
+.cat-icon{font-size:18px}
+.sc-ticker{font-size:18px;font-weight:500;letter-spacing:.18px}
+.sc-name{color:var(--text-n7);font-size:13px;flex:1}
+.score-badge{font-size:12px;font-weight:500;padding:2px 10px;border-radius:var(--radius-ct-xs)}
+.score-badge.high{background:var(--main-m5-10);color:#b8860b}.score-badge.mid{background:rgba(33,150,243,.1);color:var(--main-m2)}.score-badge.low{background:var(--b-r03);color:var(--text-n5)}
+.sc-tags{display:flex;gap:4px;flex-wrap:wrap}
+.sc-tag{font-size:11px;padding:1px 6px;border-radius:var(--radius-ct-xs);background:var(--b-r02);color:var(--text-n7)}
+.sc-tag.nano{background:var(--main-m5-10);color:#b8860b}.sc-tag.micro{background:var(--main-m6-10);color:var(--main-m6)}.sc-tag.small{background:rgba(33,150,243,.08);color:var(--main-m2)}
+.sc-summary{color:var(--text-n7);font-size:13px;line-height:20px;letter-spacing:.13px;margin:2px 0}
+.sc-type-label{color:var(--main-m1);font-size:12px;font-weight:500}
+.sc-price{font-size:14px}.sc-price .from{color:var(--text-n5)}.sc-price .arrow{color:var(--text-n3);margin:0 4px}
+.sc-price .to{font-weight:500}
+.sc-price .pct.up{color:var(--main-m3)}.sc-price .pct.dn{color:var(--main-m4)}
+.sc-timer{color:var(--text-n5);font-size:12px;margin-left:var(--spacing-s)}
+.sc-actions{display:flex;gap:var(--spacing-xs);margin-top:var(--spacing-xs)}
+.sc-btn{font-size:12px;padding:4px 12px;border-radius:var(--radius-ct-s);border:.5px solid var(--line-l3);background:#fff;color:var(--text-n7);cursor:pointer;transition:.15s;font-family:inherit;letter-spacing:.12px}
+.sc-btn:hover{border-color:var(--text-n9);color:var(--text-n9)}
+
+.signal-card.gold{background:var(--main-m5-10)}
+.signal-card.gold::after{background:rgba(230,169,26,.15)}
+
+.race-container{max-width:800px}
+.race-lane{display:flex;align-items:center;margin-bottom:var(--spacing-s);height:40px}
+.race-label{width:110px;font-size:13px;font-weight:400;text-align:right;padding-right:var(--spacing-s);color:var(--text-n7);white-space:nowrap}
+.race-track{flex:1;background:var(--grey-g01);border-radius:var(--radius-ct-xs);height:28px;position:relative;overflow:hidden}
+.race-bar{height:100%;border-radius:var(--radius-ct-xs);display:flex;align-items:center;padding:0 var(--spacing-xs);font-size:11px;font-weight:500;color:#fff;transition:width 1.5s cubic-bezier(.22,1,.36,1);min-width:fit-content;white-space:nowrap}
+.race-info{font-size:12px;color:var(--text-n5);margin-left:var(--spacing-s);white-space:nowrap;min-width:140px}
+.race-missed{color:var(--main-m4);font-weight:500}
+.race-summary{margin-top:var(--spacing-l);padding:var(--spacing-m);background:var(--grey-g01);border-radius:var(--radius-ct-m);font-size:13px;color:var(--text-n7);line-height:22px}
+
+.bt-layout{display:flex;gap:var(--spacing-xl)}
+.bt-filters{width:260px;flex-shrink:0}
+.bt-filters h3{font-size:14px;font-weight:500;margin-bottom:var(--spacing-s);color:var(--text-n7)}
+.bt-field{margin-bottom:var(--spacing-m)}
+.bt-field label{display:block;font-size:12px;color:var(--text-n5);margin-bottom:4px}
+.bt-field select,.bt-field input[type=range]{width:100%;font-family:inherit}
+.bt-field select{background:#fff;border:.5px solid var(--line-l3);color:var(--text-n9);padding:4px 8px;border-radius:var(--radius-ct-s);font-size:12px}
+.bt-check{display:flex;flex-wrap:wrap;gap:4px}
+.bt-check label{font-size:12px;padding:2px 8px;border-radius:var(--radius-ct-xs);border:.5px solid var(--line-l3);cursor:pointer;transition:.15s;color:var(--text-n5)}
+.bt-check label.active{border-color:var(--main-m1);color:var(--main-m1);background:rgba(73,163,166,.08)}
+.bt-main{flex:1;min-width:0}
+.bt-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--spacing-s);margin-bottom:var(--spacing-l)}
+.bt-stat{background:var(--grey-g01);border-radius:var(--radius-ct-s);padding:var(--spacing-s);text-align:center}
+.bt-stat .lbl{font-size:11px;color:var(--text-n5);text-transform:uppercase;letter-spacing:.5px}
+.bt-stat .val{font-size:22px;font-weight:400;margin-top:4px}
+.bt-charts{display:grid;grid-template-columns:1fr 1fr;gap:var(--spacing-l)}
+.bt-chart-box{display:flex;flex-direction:column}
+.bt-chart-box.full{grid-column:1/-1}
+.bt-chart-title{font-size:13px;color:var(--text-n7);margin-bottom:var(--spacing-xs)}
+
+.tp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;justify-content:center;align-items:flex-start;padding:48px 16px;overflow-y:auto}
+.tp-overlay.show{display:flex}
+.tp-panel{background:#fff;border:.5px solid var(--line-l2);border-radius:var(--radius-ct-l);max-width:900px;width:100%;padding:var(--spacing-xxl);position:relative}
+.tp-close{position:absolute;top:var(--spacing-m);right:var(--spacing-m);width:18px;height:18px;cursor:pointer;background:none;border:none;opacity:.7;transition:.15s}
+.tp-close:hover{opacity:1}
+.tp-close svg{display:block;width:100%;height:100%}
+.tp-header{display:flex;align-items:center;gap:var(--spacing-s);margin-bottom:var(--spacing-l)}
+.tp-section{margin-bottom:var(--spacing-l)}
+.tp-section h3{font-size:14px;font-weight:500;color:var(--text-n7);margin-bottom:var(--spacing-s);padding-bottom:var(--spacing-xs);border-bottom:1px solid var(--line-l05)}
+.tp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--spacing-s)}
+.tp-item{background:var(--grey-g01);border-radius:var(--radius-ct-s);padding:var(--spacing-s)}
+.tp-item .lbl{font-size:11px;color:var(--text-n5)}
+.tp-item .val{font-size:16px;font-weight:400;margin-top:2px}
+.tp-item .val.green{color:var(--main-m3)}.tp-item .val.red{color:var(--main-m4)}.tp-item .val.gold{color:#b8860b}
+.tp-warning{background:var(--main-m4-10);border-radius:var(--radius-ct-s);padding:var(--spacing-s);color:var(--main-m4);font-size:13px;margin-top:var(--spacing-s)}
+.tp-chart{width:100%;height:350px}
+
+#alertOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;justify-content:center;align-items:center;flex-direction:column}
+#alertOverlay.show{display:flex}
+.alert-box{background:#fff;border-radius:var(--radius-ct-l);padding:40px;text-align:center;max-width:500px;animation:alertPop .4s}
+@keyframes alertPop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.alert-box .a-ticker{font-size:48px;font-weight:400;color:var(--text-n9)}
+.alert-box .a-score{font-size:22px;color:var(--main-m5);margin:var(--spacing-xs) 0}
+.alert-box .a-summary{font-size:14px;color:var(--text-n7);margin:var(--spacing-s) 0 var(--spacing-l)}
+.alert-box .a-dismiss{background:var(--main-m1);color:#fff;border:none;padding:9px 20px;border-radius:var(--radius-ct-m);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:.15s}
+.alert-box .a-dismiss:hover{filter:brightness(.9)}
+
+.modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;display:none;justify-content:center;align-items:center}
+.modal-mask.show{display:flex}
+.modal-box{background:#fff;border:.5px solid var(--line-l2);border-radius:var(--radius-ct-l);padding:var(--spacing-xxl);max-width:400px;width:100%}
+.modal-box h2{font-size:18px;font-weight:500;line-height:28px;letter-spacing:.18px;margin-bottom:var(--spacing-m)}
+.modal-box label{display:block;font-size:12px;color:var(--text-n5);margin-bottom:4px;margin-top:var(--spacing-s)}
+.modal-box input,.modal-box select{width:100%;background:#fff;border:.5px solid var(--line-l3);color:var(--text-n9);padding:8px 12px;border-radius:var(--radius-ct-s);font-size:14px;font-family:inherit}
+.modal-actions{display:flex;gap:var(--spacing-xs);margin-top:var(--spacing-l);justify-content:flex-end}
+.modal-actions .btn-primary{background:var(--main-m1);color:#fff;border:none;padding:9px 20px;border-radius:var(--radius-ct-m);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
+.modal-actions .btn-secondary{background:#fff;color:var(--text-n9);border:.5px solid var(--line-l3);padding:9px 20px;border-radius:var(--radius-ct-m);font-size:14px;cursor:pointer;font-family:inherit}
+
+.empty-state{text-align:center;padding:60px var(--spacing-l);color:var(--text-n5)}
+.empty-state .icon{font-size:36px;margin-bottom:var(--spacing-s)}
+
+.settings-trigger{background:transparent;border:.5px solid var(--line-l3);color:var(--text-n7);padding:4px 12px;border-radius:var(--radius-ct-s);cursor:pointer;font-size:12px;font-family:inherit;transition:.15s}
+.settings-trigger:hover{border-color:var(--text-n9);color:var(--text-n9)}
+
+.positive{color:var(--main-m3)}.negative{color:var(--main-m4)}.neutral{color:var(--text-n9)}
+
+.page-footer{display:flex;align-items:center;justify-content:center;gap:8px;padding:var(--spacing-l) var(--spacing-xl);border-top:1px solid var(--line-l07);color:var(--text-n3);font-size:11px}
+.page-footer a{color:var(--main-m1);font-weight:500}
+
+@media(max-width:768px){.bt-layout{flex-direction:column}.bt-filters{width:100%}.bt-stats{grid-template-columns:repeat(3,1fr)}.bt-charts{grid-template-columns:1fr}.header-stats{display:none}}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>
+    <span class="alva-logo"><svg width="20" height="20" viewBox="0 0 50 50" fill="none"><path d="M34.47 0.4C38.14-0.13 41.86-0.13 45.53 0.4c.29.04.59.09 1.18.18.2.03.29.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0c-10.87 0-19.72 8.68-19.99 19.48L20 40c0 1.85-.13 3.7-.4 5.53-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.04-.38.07-.59.09-.88.14-1.18.18-3.67.53-7.39.53-11.06 0-.29-.04-.59-.09-1.18-.18-.2-.03-.29-.05-.38-.07-1.13-.25-2.01-1.13-2.26-2.26-.02-.09-.04-.19-.07-.38-.09-.59-.14-.88-.18-1.18-.53-3.67-.53-7.39 0-11.06.04-.29.09-.59.18-1.18.03-.2.05-.29.07-.38.25-1.13 1.13-2.01 2.26-2.26.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18C6.3 30.13 8.15 30 10 30v0c11-0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53.04-.29.09-.59.18-1.18.03-.2.05-.29.07-.38C30.9 1.78 31.78.9 32.91.65c.09-.02.19-.04.38-.07.59-.09.88-.14 1.18-.18z" fill="#49A3A6"/><path d="M45.53 30.4c-3.67-.53-7.39-.53-11.06 0-.29.04-.59.09-1.18.18-.2.03-.29.05-.38.07-1.13.25-2.01 1.13-2.26 2.26-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.29-.07-.38-.25-1.13-1.13-2.01-2.26-2.26-.09-.02-.19-.03-.38-.07-.59-.09-.88-.14-1.18-.18zM15.53 0.4C11.86-.13 8.14-.13 4.47 0.4c-.29.04-.59.09-1.18.18-.2.03-.29.05-.38.07C1.78.9.9 1.78.65 2.91c-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.29-.07-.38C19.1 1.78 18.22.9 17.09.65c-.09-.02-.19-.04-.38-.07-.59-.09-.88-.14-1.18-.18z" fill="black"/></svg></span>
+    <span class="conn-dot on" id="connDot"></span>
+    <span data-i18n="title">PR Wire Catalyst Monitor</span>
+  </h1>
+  <div class="header-stats">
+    <div class="header-stat"><div class="lbl" data-i18n="hdr.today">Today's Signals</div><div class="val" id="statTotal">0</div></div>
+    <div class="header-stat"><div class="lbl" data-i18n="hdr.active">Active</div><div class="val" id="statActive">0</div></div>
+    <div class="header-stat"><div class="lbl" data-i18n="hdr.top">Top Signal</div><div class="val" id="statBest">--</div></div>
+  </div>
+  <div class="header-right">
+    <div class="market-info">
+      <div class="et" id="etTime">--</div>
+      <span class="mkt-badge" id="mktStatus">--</span>
+    </div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" data-lang="zh" onclick="setLang('zh')">中文</button>
+    </div>
+    <button class="settings-trigger" onclick="showSettings()" data-i18n="settings">Settings</button>
+  </div>
+</div>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" data-mod="A" onclick="switchTab('A')" data-i18n="tab.signal">Signal Panel</div>
+  <div class="nav-tab" data-mod="B" onclick="switchTab('B')" data-i18n="tab.race">Delay Race</div>
+  <div class="nav-tab" data-mod="C" onclick="switchTab('C')" data-i18n="tab.bt">Backtest</div>
+</div>
+
+<!-- Module A -->
+<div class="module active" id="modA">
+  <div class="filter-bar">
+    <select class="alva-select" id="filterScore" onchange="renderSignals()"></select>
+    <select class="alva-select" id="filterType" onchange="renderSignals()"></select>
+    <select class="alva-select" id="filterSource" onchange="renderSignals()">
+      <option value="all">All Sources</option><option value="Business Wire">Business Wire</option><option value="PR Newswire">PR Newswire</option><option value="GlobeNewswire">GlobeNewswire</option><option value="ACCESSWIRE">ACCESSWIRE</option>
+    </select>
+    <div style="flex:1"></div>
+    <span class="alva-data-badge"><svg width="14" height="14" viewBox="0 0 50 50" fill="none"><path d="M34.47 0.4C38.14-0.13 41.86-0.13 45.53 0.4c.29.04.59.09 1.18.18.2.03.29.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0c-10.87 0-19.72 8.68-19.99 19.48L20 40c0 1.85-.13 3.7-.4 5.53-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.04-.38.07-.59.09-.88.14-1.18.18-3.67.53-7.39.53-11.06 0-.29-.04-.59-.09-1.18-.18-.2-.03-.29-.05-.38-.07-1.13-.25-2.01-1.13-2.26-2.26-.02-.09-.04-.19-.07-.38-.09-.59-.14-.88-.18-1.18-.53-3.67-.53-7.39 0-11.06.04-.29.09-.59.18-1.18.03-.2.05-.29.07-.38.25-1.13 1.13-2.01 2.26-2.26.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18C6.3 30.13 8.15 30 10 30v0c11-0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53.04-.29.09-.59.18-1.18.03-.2.05-.29.07-.38C30.9 1.78 31.78.9 32.91.65c.09-.02.19-.04.38-.07.59-.09.88-.14 1.18-.18z" fill="#49A3A6"/><path d="M45.53 30.4c-3.67-.53-7.39-.53-11.06 0-.29.04-.59.09-1.18.18-.2.03-.29.05-.38.07-1.13.25-2.01 1.13-2.26 2.26-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.29-.07-.38-.25-1.13-1.13-2.01-2.26-2.26-.09-.02-.19-.03-.38-.07-.59-.09-.88-.14-1.18-.18zM15.53 0.4C11.86-.13 8.14-.13 4.47 0.4c-.29.04-.59.09-1.18.18-.2.03-.29.05-.38.07C1.78.9.9 1.78.65 2.91c-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.29-.07-.38C19.1 1.78 18.22.9 17.09.65c-.09-.02-.19-.04-.38-.07-.59-.09-.88-.14-1.18-.18z" fill="black"/></svg><span data-i18n="badge.managed">Alva Managed Monitoring</span></span>
+    <span style="font-size:12px;color:var(--text-n5);margin-left:8px" id="lastPoll"></span>
+  </div>
+  <div class="feed-bg">
+    <div class="signal-list" id="signalList"></div>
+    <div class="alva-watermark"><svg width="56" height="14" viewBox="0 0 203 52" fill="none"><path d="M34.47 0.4C38.14-0.13 41.86-0.13 45.53 0.4c.29.04.59.09 1.18.18.2.03.29.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0c-10.87 0-19.72 8.68-19.99 19.48L20 40c0 1.85-.13 3.7-.4 5.53-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.04-.38.07-.59.09-.88.14-1.18.18-3.67.53-7.39.53-11.06 0-.29-.04-.59-.09-1.18-.18-.2-.03-.29-.05-.38-.07-1.13-.25-2.01-1.13-2.26-2.26-.02-.09-.04-.19-.07-.38-.09-.59-.14-.88-.18-1.18-.53-3.67-.53-7.39 0-11.06.04-.29.09-.59.18-1.18.03-.2.05-.29.07-.38.25-1.13 1.13-2.01 2.26-2.26.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18C6.3 30.13 8.15 30 10 30v0c11-0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53.04-.29.09-.59.18-1.18.03-.2.05-.29.07-.38C30.9 1.78 31.78.9 32.91.65c.09-.02.19-.04.38-.07.59-.09.88-.14 1.18-.18z" fill="#49A3A6"/><path d="M45.53 30.4c-3.67-.53-7.39-.53-11.06 0-.29.04-.59.09-1.18.18-.2.03-.29.05-.38.07-1.13.25-2.01 1.13-2.26 2.26-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.29-.07-.38-.25-1.13-1.13-2.01-2.26-2.26-.09-.02-.19-.03-.38-.07-.59-.09-.88-.14-1.18-.18zM15.53 0.4C11.86-.13 8.14-.13 4.47 0.4c-.29.04-.59.09-1.18.18-.2.03-.29.05-.38.07C1.78.9.9 1.78.65 2.91c-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.29-.07-.38C19.1 1.78 18.22.9 17.09.65c-.09-.02-.19-.04-.38-.07-.59-.09-.88-.14-1.18-.18z" fill="black"/><path d="M184 10.4c2.9 0 5.5.38 7.78 1.14 2.3.76 4.24 1.85 5.82 3.29 1.6 1.43 2.82 3.19 3.66 5.26.84 2.07 1.26 4.42 1.26 7.04v22.87h-8.78v-10.11c-.45 1.73-1.14 3.28-2.06 4.67-.91 1.38-2.02 2.55-3.34 3.51-1.32.96-2.82 1.69-4.5 2.2-1.67.51-3.48.77-5.44.77-2.04 0-3.9-.28-5.58-.84-1.67-.55-3.1-1.32-4.28-2.33-1.19-1-2.11-2.21-2.76-3.62-.64-1.42-.96-2.99-.96-4.72 0-1.79.36-3.4 1.07-4.82.71-1.42 1.73-2.63 3.06-3.62 1.34-.99 2.97-1.75 4.9-2.27 1.92-.54 4.09-.8 6.5-.8h13.39v-.89c0-1.46-.23-2.76-.68-3.92-.45-1.17-1.11-2.16-1.97-2.97-.85-.82-1.89-1.44-3.11-1.87-1.22-.43-2.6-.65-4.14-.65-1.56 0-2.92.18-4.07.54-1.14.35-2.09.85-2.83 1.5-.75.65-1.3 1.44-1.66 2.36-.36.92-.54 1.95-.54 3.09h-8.76c0-2.27.42-4.32 1.26-6.15.84-1.83 2.03-3.39 3.58-4.67 1.56-1.29 3.46-2.28 5.68-2.97 2.24-.69 4.75-1.03 7.52-1.03zM108.88 50h-9.79l-3.93-11.77H73.58L69.58 50H60L77.94 0h13.25L108.88 50zM121.17 50h-8.78V0h8.78v50zM144.81 44.51l10.7-33.06h8.97l-13.39 38.55h-12.76L125.06 11.45h9.18l10.58 33.06zM180.89 34.18c-2.4 0-4.22.4-5.46 1.21-1.22.8-1.83 1.99-1.83 3.57 0 1.65.67 2.93 2.01 3.81 1.35.87 3.3 1.31 5.84 1.31 1.79 0 3.44-.22 4.95-.65 1.51-.44 2.81-1.06 3.9-1.84 1.1-.78 1.95-1.71 2.55-2.78.62-1.08.93-2.26.93-3.53v-1.1h-12.89zM76.24 30.4h16.3l-8.1-24.16-8.2 24.16z" fill="black"/></svg></div>
+  </div>
+</div>
+
+<!-- Module B -->
+<div class="module" id="modB">
+  <div style="margin-bottom:var(--spacing-m)">
+    <select class="alva-select" id="raceSignalSelect" onchange="renderDelayRace()" style="min-width:260px"></select>
+  </div>
+  <div class="race-container" id="raceContainer">
+    <div class="empty-state"><div class="icon">⏱</div><p data-i18n="race.empty">Select a signal to view media propagation delay</p></div>
+  </div>
+</div>
+
+<!-- Module C -->
+<div class="module" id="modC">
+  <div class="bt-layout">
+    <div class="bt-filters">
+      <h3 data-i18n="bt.filters">Filters</h3>
+      <div class="bt-field"><label data-i18n="bt.catType">Catalyst Type</label>
+        <div class="bt-check" id="btTypeFilter">
+          <label class="active" data-v="A" onclick="toggleBtType(this)">A Gov</label>
+          <label class="active" data-v="B" onclick="toggleBtType(this)">B FDA</label>
+          <label class="active" data-v="C" onclick="toggleBtType(this)">C M&amp;A</label>
+          <label class="active" data-v="D" onclick="toggleBtType(this)">D Legal</label>
+          <label class="active" data-v="E" onclick="toggleBtType(this)">E Tech</label>
+          <label data-v="F" onclick="toggleBtType(this)">F Fin</label>
+        </div>
+      </div>
+      <div class="bt-field"><label data-i18n="bt.mcapMax">Market Cap Max</label>
+        <input type="range" id="btMcapMax" min="0" max="2000" value="2000" step="50" oninput="updateBtLabel(this);renderBacktest()">
+        <span id="btMcapLabel" style="font-size:11px;color:var(--text-n5)">$2.0B</span>
+      </div>
+      <div class="bt-field"><label data-i18n="bt.timeRange">Time Range</label>
+        <select id="btTimeRange" onchange="renderBacktest()" style="width:100%;font-family:inherit;background:#fff;border:.5px solid var(--line-l3);padding:4px 8px;border-radius:4px;font-size:12px;color:var(--text-n9)"></select>
+      </div>
+      <button style="width:100%;padding:9px;background:var(--main-m1);color:#fff;border:none;border-radius:var(--radius-ct-m);cursor:pointer;font-size:14px;font-weight:500;font-family:inherit" onclick="renderBacktest()" data-i18n="bt.apply">Apply</button>
+    </div>
+    <div class="bt-main">
+      <div class="bt-stats" id="btStats"></div>
+      <div class="bt-charts">
+        <div class="bt-chart-box"><div class="bt-chart-title" data-i18n="bt.gainDist">Gain Distribution</div><div class="chart-dotted-bg"><div id="btHistChart" style="width:100%;height:260px"></div><div class="alva-watermark"><svg width="56" height="14" viewBox="0 0 203 52" fill="none"><path d="M34.47 0.4C38.14-0.13 41.86-0.13 45.53 0.4c.29.04.59.09 1.18.18.2.03.29.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0c-10.87 0-19.72 8.68-19.99 19.48L20 40c0 1.85-.13 3.7-.4 5.53l-.18 1.18c-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26l-.38.07c-.59.09-.88.14-1.18.18-3.67.53-7.39.53-11.06 0l-1.18-.18c-.2-.03-.29-.05-.38-.07-1.13-.25-2.01-1.13-2.26-2.26l-.07-.38c-.09-.59-.14-.88-.18-1.18-.53-3.67-.53-7.39 0-11.06l.18-1.18c.03-.2.05-.29.07-.38.25-1.13 1.13-2.01 2.26-2.26l.38-.07c.59-.09.88-.14 1.18-.18C6.3 30.13 8.15 30 10 30v0c11-0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53l.18-1.18c.03-.2.05-.29.07-.38C30.9 1.78 31.78.9 32.91.65l.38-.07c.59-.09.88-.14 1.18-.18z" fill="#49A3A6"/><path d="M45.53 30.4c-3.67-.53-7.39-.53-11.06 0l-1.18.18c-.2.03-.29.05-.38.07-1.13.25-2.01 1.13-2.26 2.26l-.07.38c-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06l.18 1.18c.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26l.38.07c.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0l1.18-.18c.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26l.07-.38c.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06l-.18-1.18c-.03-.2-.05-.29-.07-.38-.25-1.13-1.13-2.01-2.26-2.26l-.38-.07c-.59-.09-.88-.14-1.18-.18zM15.53 0.4C11.86-.13 8.14-.13 4.47 0.4l-1.18.18c-.2.03-.29.05-.38.07C1.78.9.9 1.78.65 2.91l-.07.38c-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06l.18 1.18c.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26l.38.07c.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0l1.18-.18c.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26l.07-.38c.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06l-.18-1.18c-.03-.2-.05-.29-.07-.38C19.1 1.78 18.22.9 17.09.65l-.38-.07c-.59-.09-.88-.14-1.18-.18z" fill="black"/></svg></div></div></div>
+        <div class="bt-chart-box"><div class="bt-chart-title" data-i18n="bt.entryDelay">Entry Delay vs Return</div><div class="chart-dotted-bg"><div id="btEntryChart" style="width:100%;height:260px"></div><div class="alva-watermark"><svg width="56" height="14" viewBox="0 0 50 20" fill="none"><path d="M13.79 0.16C15.26-.05 16.74-.05 18.21 0.16l.47.07.15.03c.45.1.8.45.9.9l.03.16c.04.24.06.35.07.47.21 1.47.21 2.96 0 4.43l-.07.47-.03.15c-.1.45-.45.8-.9.9l-.16.03-.47.07c-.73.11-1.47.16-2.21.16v0c-4.35 0-7.89 3.47-8 7.79L8 16c0 .74-.05 1.48-.16 2.21l-.07.47-.03.15c-.1.45-.45.8-.9.9l-.16.03-.47.07c-1.47.21-2.96.21-4.43 0l-.47-.07-.15-.03c-.45-.1-.8-.45-.9-.9l-.03-.16c-.04-.24-.06-.35-.07-.47-.21-1.47-.21-2.96 0-4.43l.07-.47.03-.15c.1-.45.45-.8.9-.9l.16-.03.47-.07C2.52 12.05 3.26 12 4 12v0c4.4 0 7.97-3.55 8-7.94L12 4c0-.74.05-1.48.16-2.21l.07-.47.03-.15c.1-.45.45-.8.9-.9l.16-.03.47-.07z" fill="#49A3A6"/><path d="M18.21 12.16c-1.47-.21-2.96-.21-4.43 0l-.47.07-.15.03c-.45.1-.8.45-.9.9l-.03.16-.07.47c-.21 1.47-.21 2.96 0 4.43l.07.47.03.15c.1.45.45.8.9.9l.16.03.47.07c1.47.21 2.96.21 4.43 0l.47-.07.15-.03c.45-.1.8-.45.9-.9l.03-.16.07-.47c.21-1.47.21-2.96 0-4.43l-.07-.47-.03-.15c-.1-.45-.45-.8-.9-.9l-.16-.03-.47-.07zM6.21 0.16C4.74-.05 3.26-.05 1.79 0.16l-.47.07-.15.03c-.45.1-.8.45-.9.9L.24 1.33l-.07.47c-.21 1.47-.21 2.96 0 4.43l.07.47.03.15c.1.45.45.8.9.9l.16.03.47.07c1.47.21 2.96.21 4.43 0l.47-.07.15-.03c.45-.1.8-.45.9-.9l.03-.16.07-.47c.21-1.47.21-2.96 0-4.43l-.07-.47-.03-.15c-.1-.45-.45-.8-.9-.9L6.68.23l-.47-.07z" fill="black"/></svg></div></div></div>
+        <div class="bt-chart-box full"><div class="bt-chart-title" data-i18n="bt.trajectories">Normalized Price Trajectories (T+0 to T+60min)</div><div class="chart-dotted-bg"><div id="btTrajectoryChart" style="width:100%;height:340px"></div><div class="alva-watermark"><svg width="56" height="14" viewBox="0 0 50 20" fill="none"><path d="M13.79 0.16C15.26-.05 16.74-.05 18.21 0.16l.47.07.15.03c.45.1.8.45.9.9l.03.16c.04.24.06.35.07.47.21 1.47.21 2.96 0 4.43l-.07.47-.03.15c-.1.45-.45.8-.9.9l-.16.03-.47.07c-.73.11-1.47.16-2.21.16v0c-4.35 0-7.89 3.47-8 7.79L8 16c0 .74-.05 1.48-.16 2.21l-.07.47-.03.15c-.1.45-.45.8-.9.9l-.16.03-.47.07c-1.47.21-2.96.21-4.43 0l-.47-.07-.15-.03c-.45-.1-.8-.45-.9-.9l-.03-.16c-.04-.24-.06-.35-.07-.47-.21-1.47-.21-2.96 0-4.43l.07-.47.03-.15c.1-.45.45-.8.9-.9l.16-.03.47-.07C2.52 12.05 3.26 12 4 12v0c4.4 0 7.97-3.55 8-7.94L12 4c0-.74.05-1.48.16-2.21l.07-.47.03-.15c.1-.45.45-.8.9-.9l.16-.03.47-.07z" fill="#49A3A6"/><path d="M18.21 12.16c-1.47-.21-2.96-.21-4.43 0l-.47.07-.15.03c-.45.1-.8.45-.9.9l-.03.16-.07.47c-.21 1.47-.21 2.96 0 4.43l.07.47.03.15c.1.45.45.8.9.9l.16.03.47.07c1.47.21 2.96.21 4.43 0l.47-.07.15-.03c.45-.1.8-.45.9-.9l.03-.16.07-.47c.21-1.47.21-2.96 0-4.43l-.07-.47-.03-.15c-.1-.45-.45-.8-.9-.9l-.16-.03-.47-.07zM6.21 0.16C4.74-.05 3.26-.05 1.79 0.16l-.47.07-.15.03c-.45.1-.8.45-.9.9L.24 1.33l-.07.47c-.21 1.47-.21 2.96 0 4.43l.07.47.03.15c.1.45.45.8.9.9l.16.03.47.07c1.47.21 2.96.21 4.43 0l.47-.07.15-.03c.45-.1.8-.45.9-.9l.03-.16.07-.47c.21-1.47.21-2.96 0-4.43l-.07-.47-.03-.15c-.1-.45-.45-.8-.9-.9L6.68.23l-.47-.07z" fill="black"/></svg></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Trade Plan Overlay -->
+<div class="tp-overlay" id="tpOverlay" onclick="if(event.target===this)closeTradePlan()">
+  <div class="tp-panel" id="tpPanel"></div>
+</div>
+
+<!-- Alert Overlay -->
+<div id="alertOverlay" onclick="dismissAlert()">
+  <div class="alert-box">
+    <div class="a-ticker" id="alertTicker"></div>
+    <div class="a-score" id="alertScore"></div>
+    <div class="a-summary" id="alertSummary"></div>
+    <button class="a-dismiss" data-i18n="alert.dismiss">Dismiss</button>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-mask" id="settingsModal">
+  <div class="modal-box">
+    <h2 data-i18n="settings">Settings</h2>
+    <label data-i18n="set.account">Account Size (USD)</label><input type="number" id="setAccountSize" value="10000">
+    <label data-i18n="set.sound">Alert Sound</label>
+    <select id="setAlertSound"></select>
+    <label data-i18n="set.interval">Refresh Interval (sec)</label><input type="number" id="setRefreshInterval" value="30" min="10" max="300">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeSettings()" data-i18n="cancel">Cancel</button>
+      <button class="btn-primary" onclick="saveSettings()" data-i18n="save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="page-footer">
+  <svg width="16" height="16" viewBox="0 0 50 50" fill="none"><path d="M34.47 0.4C38.14-0.13 41.86-0.13 45.53 0.4c.29.04.59.09 1.18.18.2.03.29.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0c-10.87 0-19.72 8.68-19.99 19.48L20 40c0 1.85-.13 3.7-.4 5.53-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.04-.38.07-.59.09-.88.14-1.18.18-3.67.53-7.39.53-11.06 0-.29-.04-.59-.09-1.18-.18-.2-.03-.29-.05-.38-.07-1.13-.25-2.01-1.13-2.26-2.26-.02-.09-.04-.19-.07-.38-.09-.59-.14-.88-.18-1.18-.53-3.67-.53-7.39 0-11.06.04-.29.09-.59.18-1.18.03-.2.05-.29.07-.38.25-1.13 1.13-2.01 2.26-2.26.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18C6.3 30.13 8.15 30 10 30v0c11-0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53.04-.29.09-.59.18-1.18.03-.2.05-.29.07-.38C30.9 1.78 31.78.9 32.91.65c.09-.02.19-.04.38-.07.59-.09.88-.14 1.18-.18z" fill="#49A3A6"/><path d="M45.53 30.4c-3.67-.53-7.39-.53-11.06 0-.29.04-.59.09-1.18.18-.2.03-.29.05-.38.07-1.13.25-2.01 1.13-2.26 2.26-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.29-.07-.38-.25-1.13-1.13-2.01-2.26-2.26-.09-.02-.19-.03-.38-.07-.59-.09-.88-.14-1.18-.18zM15.53 0.4C11.86-.13 8.14-.13 4.47 0.4c-.29.04-.59.09-1.18.18-.2.03-.29.05-.38.07C1.78.9.9 1.78.65 2.91c-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.29.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.29-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.29-.07-.38C19.1 1.78 18.22.9 17.09.65c-.09-.02-.19-.04-.38-.07-.59-.09-.88-.14-1.18-.18z" fill="black"/></svg>
+  <span data-i18n="footer">Powered by Alva — Real-time data, NLP scoring & managed monitoring</span>
+</div>
+
+<script>
+/* ═══ I18N ═══ */
+const I18N={
+en:{
+  title:'PR Wire Catalyst Monitor','hdr.today':"Today's Signals",'hdr.active':'Active','hdr.top':'Top Signal',
+  settings:'Settings','tab.signal':'Signal Panel','tab.race':'Delay Race','tab.bt':'Backtest',
+  'f.allScores':'All Scores','f.high':'Score 8-10','f.mid':'Score 5-7','f.low':'Score <5',
+  'f.allTypes':'All Types','f.A':'A — Gov Contract','f.B':'B — FDA','f.C':'C — M&A','f.D':'D — Settlement','f.E':'E — Tech License','f.F':'F — Financing',
+  'f.allSources':'All Sources',
+  'badge.managed':'Alva Managed Monitoring','badge.data':'Data via Alva',
+  'mkt.pre':'Pre-Market','mkt.open':'Open','mkt.after':'After-Hours','mkt.closed':'Closed',
+  'cat.A':'Gov/Military Contract','cat.B':'FDA/Medical','cat.C':'M&A','cat.D':'Legal Settlement','cat.E':'Tech License/Partnership','cat.F':'Financing (Dilutive)',
+  cap:'Cap',float:'Float',short:'Short','no.signals':'No signals matching filters',
+  'btn.plan':'Trade Plan','btn.race':'Delay Race','btn.hist':'Historical','btn.source':'Source',
+  ago:'ago',hAgo:'h',mAgo:'m',sAgo:'s',
+  'race.empty':'Select a signal to view media propagation delay','race.select':'Select a signal...',
+  'race.first':'First','race.missed':'missed',
+  'race.summary.1':'From Wire to Yahoo Finance,','race.summary.2':'went from','race.summary.3':'to','race.summary.4':'. You missed','race.summary.5':'of the total','race.summary.6':'move.',
+  'bt.filters':'Filters','bt.catType':'Catalyst Type','bt.mcapMax':'Market Cap Max','bt.timeRange':'Time Range',
+  'bt.1m':'1 Month','bt.3m':'3 Months','bt.6m':'6 Months','bt.12m':'12 Months','bt.apply':'Apply',
+  'bt.samples':'Samples','bt.medianGain':'Median Gain','bt.peakTime':'Peak Time','bt.bestEntry':'Best Entry','bt.winRate':'Win Rate','bt.noData':'No data matches filters.',
+  'bt.gainDist':'Gain Distribution','bt.entryDelay':'Entry Delay vs Return','bt.trajectories':'Normalized Price Trajectories (T+0 to T+60min)',
+  'bt.xMinutes':'Minutes after Wire',
+  'tp.entry':'Entry Zone','tp.wirePrice':'Wire Price (P0)','tp.entryLimit':'Entry Upper Limit','tp.current':'Current Price','tp.entryWindow':'Entry Window','tp.ofMedian':'of median',
+  'tp.overEntry':'Current price exceeded entry zone. Chasing risk is elevated.',
+  'tp.position':'Position Sizing','tp.account':'Account','tp.alloc':'Allocation','tp.watchOnly':'Watch Only','tp.posSize':'Position Size','tp.shares':'Shares (~)',
+  'tp.weakSignal':'Signal strength insufficient. Recommend watching only.',
+  'tp.tpsl':'Take Profit / Stop Loss','tp.tp1':'TP1 (Conservative, 50%)','tp.tp2':'TP2 (Standard, 35%)','tp.tp3':'TP3 (Aggressive, 15%)','tp.sl':'Stop Loss (100%)','tp.timeStop':'Time Stop','tp.timeStopVal':'45min, <10% → exit',
+  'tp.chart':'Price Chart',
+  'alert.dismiss':'Dismiss','set.account':'Account Size (USD)','set.sound':'Alert Sound','set.on':'On','set.off':'Off','set.interval':'Refresh Interval (sec)',
+  cancel:'Cancel',save:'Save',
+  'poll.last':'Last poll:','poll.new':'new','poll.scanned':'scanned',
+  footer:'Powered by Alva — Real-time data, NLP scoring & managed monitoring',
+  'lastPoll.init':'Waiting for first poll...'
+},
+zh:{
+  title:'PR Wire 催化剂监控','hdr.today':'今日信号','hdr.active':'活跃','hdr.top':'最强信号',
+  settings:'设置','tab.signal':'信号面板','tab.race':'延迟竞速','tab.bt':'历史回测',
+  'f.allScores':'全部评分','f.high':'评分 8-10','f.mid':'评分 5-7','f.low':'评分 <5',
+  'f.allTypes':'全部类型','f.A':'A — 政府合同','f.B':'B — FDA','f.C':'C — 并购','f.D':'D — 法律和解','f.E':'E — 技术授权','f.F':'F — 融资',
+  'f.allSources':'全部来源',
+  'badge.managed':'Alva 托管监控服务','badge.data':'数据来自 Alva',
+  'mkt.pre':'盘前','mkt.open':'开盘','mkt.after':'盘后','mkt.closed':'休市',
+  'cat.A':'政府/军事合同','cat.B':'FDA/医疗','cat.C':'并购','cat.D':'法律和解','cat.E':'技术授权/合作','cat.F':'融资(稀释)',
+  cap:'市值',float:'流通',short:'做空','no.signals':'没有匹配筛选条件的信号',
+  'btn.plan':'交易计划','btn.race':'延迟竞速','btn.hist':'历史数据','btn.source':'来源',
+  ago:'前',hAgo:'时',mAgo:'分',sAgo:'秒',
+  'race.empty':'选择一个信号查看媒体传播延迟','race.select':'选择信号...',
+  'race.first':'最先','race.missed':'错过',
+  'race.summary.1':'从新闻线到雅虎财经，','race.summary.2':'从','race.summary.3':'涨到','race.summary.4':'。您错过了','race.summary.5':'（总涨幅','race.summary.6':'）',
+  'bt.filters':'筛选条件','bt.catType':'催化剂类型','bt.mcapMax':'最大市值','bt.timeRange':'时间范围',
+  'bt.1m':'1 个月','bt.3m':'3 个月','bt.6m':'6 个月','bt.12m':'12 个月','bt.apply':'应用',
+  'bt.samples':'样本数','bt.medianGain':'中位涨幅','bt.peakTime':'峰值时间','bt.bestEntry':'最佳入场','bt.winRate':'胜率','bt.noData':'无匹配数据',
+  'bt.gainDist':'涨幅分布','bt.entryDelay':'入场延迟 vs 收益','bt.trajectories':'标准化价格轨迹 (T+0 至 T+60分钟)',
+  'bt.xMinutes':'新闻发布后(分钟)',
+  'tp.entry':'入场区间','tp.wirePrice':'新闻价格 (P0)','tp.entryLimit':'入场上限','tp.current':'当前价格','tp.entryWindow':'入场窗口','tp.ofMedian':'中位数的',
+  'tp.overEntry':'当前价格已超出入场区间，追高风险较大。',
+  'tp.position':'仓位管理','tp.account':'账户','tp.alloc':'分配比例','tp.watchOnly':'仅观察','tp.posSize':'仓位大小','tp.shares':'股数(约)',
+  'tp.weakSignal':'信号强度不足，建议仅观察。',
+  'tp.tpsl':'止盈 / 止损','tp.tp1':'TP1 (保守, 50%)','tp.tp2':'TP2 (标准, 35%)','tp.tp3':'TP3 (激进, 15%)','tp.sl':'止损 (100%)','tp.timeStop':'时间止损','tp.timeStopVal':'45分钟, <10% → 退出',
+  'tp.chart':'价格走势',
+  'alert.dismiss':'关闭','set.account':'账户规模 (USD)','set.sound':'提醒声音','set.on':'开','set.off':'关','set.interval':'刷新间隔 (秒)',
+  cancel:'取消',save:'保存',
+  'poll.last':'最近轮询:','poll.new':'条新','poll.scanned':'条扫描',
+  footer:'由 Alva 提供支持 — 实时数据、NLP 评分与托管监控服务',
+  'lastPoll.init':'等待首次轮询...'
+}};
+let LANG='en';
+function t(k){return (I18N[LANG]&&I18N[LANG][k])||I18N.en[k]||k;}
+function setLang(lang){LANG=lang;localStorage.setItem('prwire_lang',lang);document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang));document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});populateFilterDropdowns();populateTimeRangeDropdown();populateAlertSoundDropdown();renderSignals();populateRaceSelect();if(STATE.activeTab==='B')renderDelayRace();if(STATE.activeTab==='C')renderBacktest();}
+
+function populateFilterDropdowns(){
+const fs=document.getElementById('filterScore');const fv=fs.value;fs.innerHTML=`<option value="all">${t('f.allScores')}</option><option value="high">${t('f.high')}</option><option value="mid">${t('f.mid')}</option><option value="low">${t('f.low')}</option>`;fs.value=fv||'all';
+const ft=document.getElementById('filterType');const tv=ft.value;ft.innerHTML=`<option value="all">${t('f.allTypes')}</option><option value="A">${t('f.A')}</option><option value="B">${t('f.B')}</option><option value="C">${t('f.C')}</option><option value="D">${t('f.D')}</option><option value="E">${t('f.E')}</option><option value="F">${t('f.F')}</option>`;ft.value=tv||'all';
+const fsr=document.getElementById('filterSource');const sv=fsr.value;fsr.innerHTML=`<option value="all">${t('f.allSources')}</option><option value="Business Wire">Business Wire</option><option value="PR Newswire">PR Newswire</option><option value="GlobeNewswire">GlobeNewswire</option><option value="ACCESSWIRE">ACCESSWIRE</option>`;fsr.value=sv||'all';}
+function populateTimeRangeDropdown(){const s=document.getElementById('btTimeRange');const v=s.value;s.innerHTML=`<option value="1">${t('bt.1m')}</option><option value="3">${t('bt.3m')}</option><option value="6">${t('bt.6m')}</option><option value="12">${t('bt.12m')}</option>`;s.value=v||'3';}
+function populateAlertSoundDropdown(){const s=document.getElementById('setAlertSound');const v=s.value;s.innerHTML=`<option value="on">${t('set.on')}</option><option value="off">${t('set.off')}</option>`;s.value=v||'on';}
+
+/* ═══ ECharts Alva Standards ═══ */
+const AX={axisLine:{show:false},axisTick:{show:false},axisLabel:{fontSize:10,color:'rgba(0,0,0,0.7)',fontFamily:"'Delight',-apple-system,BlinkMacSystemFont,sans-serif",margin:8},splitLine:{show:false}};
+function mkFmt(valueFn){valueFn=valueFn||((v)=>v);return(params)=>{const tt=params[0].axisValueLabel||params[0].axisValue;let s=`<div style="font-size:12px;color:rgba(0,0,0,0.7);margin-bottom:6px;">${tt}</div>`;params.forEach(p=>{s+=`<div style="display:flex;align-items:center;gap:6px;line-height:20px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${p.color};"></span><span style="color:rgba(0,0,0,0.9);">${p.seriesName}</span><span style="color:rgba(0,0,0,0.9);margin-left:auto;">${valueFn(p.value,p)}</span></div>`;});return s;}}
+const TT={trigger:'axis',backgroundColor:'rgba(255,255,255,0.96)',borderColor:'rgba(0,0,0,0.08)',borderWidth:1,borderRadius:6,padding:12,textStyle:{fontFamily:"'Delight',-apple-system,BlinkMacSystemFont,sans-serif",fontSize:12,fontWeight:400,color:'rgba(0,0,0,0.9)'},axisPointer:{type:'line',lineStyle:{color:'rgba(0,0,0,0.1)',width:1}},extraCssText:'box-shadow:none;',formatter:mkFmt()};
+
+/* ═══ CONFIG ═══ */
+const CFG={accountSize:10000,refreshInterval:30,alertSound:true,alvaEndpoint:'/api/v1/run'};
+const STATE={signals:[],seenIds:new Set(),rssErrors:{},lastPollTime:null,activeTab:'A',charts:{}};
+
+/* ═══ CATALYST ENGINE ═══ */
+const CAT_TYPES={
+  A:{icon:'🏛',color:'var(--main-m5)',kw:['contract','awarded','dod','navy','army','darpa','military','defense','government','federal','pentagon','air force','space force','homeland']},
+  B:{icon:'💊',color:'var(--main-m3)',kw:['fda','approved','clearance','phase 1','phase 2','phase 3','phase i','phase ii','phase iii','clinical trial','nda','eua','breakthrough therapy','pdufa','orphan drug','fast track','priority review','biologics']},
+  C:{icon:'🤝',color:'var(--chart-purple1)',kw:['acquisition','acquire','acquired','merger','buyout','tender offer','definitive agreement','merger agreement','business combination']},
+  D:{icon:'⚖',color:'var(--main-m6)',kw:['settlement','verdict','damages','lawsuit resolved','judgment','litigation','legal resolution','court awarded','arbitration']},
+  E:{icon:'🔬',color:'var(--chart-blue1)',kw:['license','licensing','partnership','collaboration','technology','patent','exclusive rights','strategic alliance','joint venture','royalty']},
+  F:{icon:'💰',color:'var(--main-m4)',kw:['offering','placement','raise','financing','ipo','spac','registered direct','shelf offering','atm offering','dilut','warrant']},
+};
+function catName(type){return t('cat.'+type);}
+const TYPE_HIST_SCORE={D:8,B:8,A:7,E:6,C:6,F:3};
+const TYPE_HIST_MEDIAN={A:.67,B:.76,C:.45,D:.80,E:.60,F:-.15};
+const TYPE_HIST_P25={A:.30,B:.35,C:.20,D:.40,E:.25,F:-.30};
+const TYPE_HIST_P75={A:1.20,B:1.40,C:.80,D:1.50,E:1.10,F:.05};
+const SOURCE_SCORE={'Business Wire':9,'PR Newswire':8,'GlobeNewswire':7,'ACCESSWIRE':6};
+
+function classifyCatalyst(title,body){const text=((title||'')+' '+(body||'')).toLowerCase();let best=null,bestCount=0;for(const[type,cfg]of Object.entries(CAT_TYPES)){const count=cfg.kw.reduce((s,kw)=>s+(text.includes(kw)?1:0),0);if(count>bestCount){best=type;bestCount=count;}}return best||'E';}
+function extractAmount(text){if(!text)return null;const patterns=[/\$\s*([\d,.]+)\s*(billion|b)\b/gi,/\$\s*([\d,.]+)\s*(million|m|mm)\b/gi,/\$\s*([\d,.]+)\s*(thousand|k)\b/gi,/\$\s*([\d,.]+)/gi,/([\d,.]+)\s*(billion|million)\s*(?:dollar|usd|\$)/gi];let maxVal=0;for(const p of patterns){let m;p.lastIndex=0;while((m=p.exec(text))!==null){let num=parseFloat(m[1].replace(/,/g,''));const unit=(m[2]||'').toLowerCase();if(unit.startsWith('b'))num*=1e9;else if(unit.startsWith('m'))num*=1e6;else if(unit.startsWith('k')||unit.startsWith('t'))num*=1e3;else if(num<1000)num*=1e6;if(num>maxVal)maxVal=num;}}return maxVal>0?maxVal:null;}
+function extractTicker(title,body){const text=(title||'')+' '+(body||'');const patterns=[/\((?:NASDAQ|NYSE|AMEX|OTC|OTCQX|OTCQB|NYSEAMERICAN|NYSEMKT|TSXV?)\s*:\s*([A-Z]{1,5})\)/gi,/\(([A-Z]{2,5})\)/g];for(const p of patterns){p.lastIndex=0;const m=p.exec(text);if(m)return m[1];}return null;}
+function scoreCatalyst(signal){const{catType,amount,marketCap,floatShares,shortPct,source,insiderNetBuy}=signal;let amountScore=5;if(amount&&marketCap&&marketCap>0){const ratio=amount/marketCap;if(ratio>=5)amountScore=10;else if(ratio>=2)amountScore=8;else if(ratio>=1)amountScore=7;else if(ratio>=.5)amountScore=6;else if(ratio>=.2)amountScore=5;else if(ratio>=.1)amountScore=4;else amountScore=3;}const typeScore=TYPE_HIST_SCORE[catType]||5;let structScore=5;if(floatShares){const fm=floatShares/1e6;if(fm<5)structScore=10;else if(fm<10)structScore=8;else if(fm<20)structScore=6;else if(fm<50)structScore=4;else structScore=2;if(shortPct&&shortPct>20)structScore=Math.min(10,structScore+2);}const srcScore=SOURCE_SCORE[source]||4;let total=.35*amountScore+.25*typeScore+.25*structScore+.15*srcScore;if(insiderNetBuy)total=Math.min(10,total+1);return Math.round(total*10)/10;}
+function mcapLabel(mcap){if(!mcap)return'N/A';if(mcap<50e6)return'Nano';if(mcap<300e6)return'Micro';if(mcap<2e9)return'Small';return'Mid+';}
+
+/* ═══ DATA FETCHERS ═══ */
+function nc(url){return url+(url.includes('?')?'&':'?')+'_t='+Date.now();}
+async function fetchRSS(source,feedPath){try{const resp=await fetch(nc('/rss/'+feedPath));if(!resp.ok)throw new Error(resp.status);const xml=await resp.text();const parser=new DOMParser();const doc=parser.parseFromString(xml,'text/xml');const items=doc.querySelectorAll('item');const results=[];items.forEach(item=>{const title=item.querySelector('title')?.textContent||'';const link=item.querySelector('link')?.textContent||'';const desc=item.querySelector('description')?.textContent||'';const pubDate=item.querySelector('pubDate')?.textContent||'';const guid=item.querySelector('guid')?.textContent||link||title;results.push({title,link,description:desc,pubDate,guid,source});});STATE.rssErrors[source]=null;return results;}catch(e){STATE.rssErrors[source]=e.message;return[];}}
+async function fetchAllRSS(){const feeds=[['Business Wire','businesswire'],['PR Newswire','prnewswire'],['GlobeNewswire','globenewswire'],['ACCESSWIRE','accesswire']];const all=await Promise.all(feeds.map(([s,p])=>fetchRSS(s,p)));return all.flat();}
+async function fetchStockData(ticker){const code=`
+const{getStockCompanyDetail}=require("@arrays/data/stock/company/detail:v1.0.0");
+const{getSharesFloat}=require("@arrays/data/stock/shares-float:v1.0.0");
+const{getMarketCap}=require("@arrays/data/market-metrics/market-cap:v1.0.0");
+const{getInsiderTrades}=require("@arrays/data/stock/trade/insider-trades:v1.0.0");
+const now=Math.floor(Date.now()/1000);const sym="${ticker}";
+let company=null,floatData=null,mcap=null,insiders=null;
+try{company=getStockCompanyDetail({symbol:sym})}catch(e){}
+try{floatData=getSharesFloat({symbol:sym})}catch(e){}
+try{mcap=getMarketCap({symbol:sym,start_time:now-86400*7,end_time:now})}catch(e){}
+try{insiders=getInsiderTrades({symbol:sym,start_time:now-86400*90,end_time:now})}catch(e){}
+JSON.stringify({company,floatData,mcap,insiders});`;try{const resp=await fetch(nc(CFG.alvaEndpoint),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const data=await resp.json();let result=data.result;if(typeof result==='string')result=JSON.parse(result);if(typeof result==='string')result=JSON.parse(result);return result;}catch(e){return null;}}
+async function fetchStockPrice(ticker){const code=`
+const{getStockKlineLastN}=require("@arrays/data/stock/spot/ohlcv:v1.0.0");
+const exchanges=["XNAS","XNYS","XASE"];let data=null;
+for(const ex of exchanges){try{const pair=ex+"_SPOT_${ticker}_USD";const r=getStockKlineLastN({ticker:pair,interval:"1m",n:60});if(r&&r.success&&r.response&&r.response.data&&r.response.data.length>0){data=r.response.data;break;}}catch(e){}}
+JSON.stringify(data);`;try{const resp=await fetch(nc(CFG.alvaEndpoint),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const d=await resp.json();let result=d.result;if(typeof result==='string')result=JSON.parse(result);if(typeof result==='string')result=JSON.parse(result);return result;}catch(e){return null;}}
+
+async function processRSSItem(item){const id=item.guid||item.title;if(STATE.seenIds.has(id))return null;STATE.seenIds.add(id);const ticker=extractTicker(item.title,item.description);if(!ticker)return null;const catType=classifyCatalyst(item.title,item.description);const amount=extractAmount(item.title+' '+item.description);const pubTime=item.pubDate?new Date(item.pubDate).getTime():Date.now();const summary=(item.title||'').slice(0,120);const signal={id,ticker,companyName:'',catType,icon:CAT_TYPES[catType].icon,amount,marketCap:null,floatShares:null,shortPct:null,industry:'',source:item.source,insiderNetBuy:false,wirePrice:null,currentPrice:null,peakPrice:null,peakTime:null,priceHistory:[],pubTime,summary,link:item.link,score:0,mediaDelays:{},active:true};const stockData=await fetchStockData(ticker);if(stockData){if(stockData.company?.response){const c=stockData.company.response;signal.companyName=c.companyName||c.name||'';signal.industry=c.industry||c.sector||'';}if(stockData.floatData?.response?.shares_float){const sf=stockData.floatData.response.shares_float;signal.floatShares=sf.float_shares||sf.outstanding_shares||null;}if(stockData.mcap?.response?.market_series?.length){signal.marketCap=stockData.mcap.response.market_series[stockData.mcap.response.market_series.length-1].value;}if(stockData.insiders?.data?.list?.length){const buys=stockData.insiders.data.list.filter(t=>(t.transactionType||'').toLowerCase().includes('buy')||(t.transactionType||'').toLowerCase().includes('purchase'));const sells=stockData.insiders.data.list.filter(t=>(t.transactionType||'').toLowerCase().includes('sell')||(t.transactionType||'').toLowerCase().includes('sale'));signal.insiderNetBuy=buys.length>sells.length;}}const priceData=await fetchStockPrice(ticker);if(priceData&&priceData.length>0){const sorted=[...priceData].sort((a,b)=>a.date-b.date);signal.wirePrice=sorted[0].close;signal.currentPrice=sorted[sorted.length-1].close;signal.peakPrice=Math.max(...sorted.map(b=>b.high));signal.priceHistory=sorted;}signal.score=scoreCatalyst(signal);return signal;}
+
+/* ═══ DEMO DATA ═══ */
+function generatePriceTrajectory(startPrice,peakGain,peakMinute,totalMinutes=60){const points=[];for(let i=0;i<=totalMinutes;i++){let gain;if(i<=peakMinute){const tt=i/peakMinute;gain=peakGain*(1-Math.pow(1-tt,2.5));}else{const decay=(i-peakMinute)/(totalMinutes-peakMinute);const retraceTarget=peakGain*.45;gain=peakGain-(peakGain-retraceTarget)*(1-Math.pow(1-decay,1.5));}const noise=(Math.random()-.5)*peakGain*.04;const price=startPrice*(1+gain+noise);points.push({minute:i,price:Math.max(startPrice*.95,price),gain:price/startPrice-1});}return points;}
+function loadDemoData(){const demos=[
+{id:'demo-prso',ticker:'PRSO',companyName:'Proso International Inc',catType:'A',icon:'🏛',amount:45e6,marketCap:35e6,floatShares:2.3e6,shortPct:35,industry:'Agriculture/Defense',source:'Business Wire',insiderNetBuy:true,wirePrice:.81,currentPrice:2.07,peakPrice:2.07,peakTime:15,pubTime:new Date('2026-03-06T09:31:00-05:00').getTime(),summary:'Proso International Awarded $45 Million U.S. Department of Defense Contract for Strategic Grain Supply',link:'#',score:0,active:false,mediaDelays:{'Benzinga':{delaySec:95,price:1.12},'Yahoo Finance':{delaySec:340,price:1.68},'Google News':{delaySec:720,price:1.95},'Reddit':{delaySec:1500,price:2.01}}},
+{id:'demo-abus',ticker:'ABUS',companyName:'Arbutus Biopharma Corp',catType:'B',icon:'💊',amount:null,marketCap:180e6,floatShares:15e6,shortPct:8,industry:'Biotechnology',source:'PR Newswire',insiderNetBuy:false,wirePrice:3.20,currentPrice:5.63,peakPrice:5.63,peakTime:25,pubTime:new Date('2026-03-03T08:00:00-05:00').getTime(),summary:'Arbutus Biopharma Receives FDA Fast Track Designation for Chronic Hepatitis B Treatment Program',link:'#',score:0,active:false,mediaDelays:{'Benzinga':{delaySec:120,price:3.85},'Yahoo Finance':{delaySec:480,price:4.90},'Google News':{delaySec:900,price:5.40},'Reddit':{delaySec:2100,price:5.20}}},
+{id:'demo-gxai',ticker:'GXAI',companyName:'Gaxos.ai Inc',catType:'E',icon:'🔬',amount:null,marketCap:25e6,floatShares:3.8e6,shortPct:22,industry:'Technology/AI',source:'GlobeNewswire',insiderNetBuy:true,wirePrice:1.45,currentPrice:3.06,peakPrice:3.06,peakTime:12,pubTime:new Date('2026-03-05T07:30:00-05:00').getTime(),summary:'Gaxos.ai Enters Exclusive Technology Licensing Agreement with Major Cloud Computing Provider',link:'#',score:0,active:false,mediaDelays:{'Benzinga':{delaySec:75,price:1.88},'Yahoo Finance':{delaySec:300,price:2.65},'Google News':{delaySec:600,price:2.90},'Reddit':{delaySec:1800,price:2.50}}}];
+demos.forEach(d=>{d.score=scoreCatalyst(d);d.priceHistory=generatePriceTrajectory(d.wirePrice,d.peakPrice/d.wirePrice-1,d.peakTime);});return demos;}
+
+/* ═══ MODULE A — SIGNAL PANEL ═══ */
+function renderSignals(){const list=document.getElementById('signalList');const filterScore=document.getElementById('filterScore').value;const filterType=document.getElementById('filterType').value;const filterSource=document.getElementById('filterSource').value;let filtered=[...STATE.signals];if(filterScore==='high')filtered=filtered.filter(s=>s.score>=8);else if(filterScore==='mid')filtered=filtered.filter(s=>s.score>=5&&s.score<8);else if(filterScore==='low')filtered=filtered.filter(s=>s.score<5);if(filterType!=='all')filtered=filtered.filter(s=>s.catType===filterType);if(filterSource!=='all')filtered=filtered.filter(s=>s.source===filterSource);filtered.sort((a,b)=>b.score-a.score||b.pubTime-a.pubTime);
+if(!filtered.length){list.innerHTML=`<div class="empty-state"><div class="icon">📡</div><p>${t('no.signals')}</p></div>`;return;}
+list.innerHTML=filtered.map(s=>{const scoreClass=s.score>=8?'gold':s.score>=5?'blue':'gray';const badgeClass=s.score>=8?'high':s.score>=5?'mid':'low';const capLabel=mcapLabel(s.marketCap);const capTagClass=capLabel==='Nano'?'nano':capLabel==='Micro'?'micro':capLabel==='Small'?'small':'';const pctChange=s.wirePrice&&s.currentPrice?((s.currentPrice-s.wirePrice)/s.wirePrice*100):null;const pctClass=pctChange!==null?(pctChange>=0?'up':'dn'):'';const elapsed=Date.now()-s.pubTime;const mins=Math.floor(elapsed/60000);const secs=Math.floor((elapsed%60000)/1000);const timerStr=mins>60?`${Math.floor(mins/60)}${t('hAgo')} ${mins%60}${t('mAgo')} ${t('ago')}`:`${mins}${t('mAgo')} ${secs}${t('sAgo')} ${t('ago')}`;
+return`<div class="signal-card ${scoreClass}" data-id="${s.id}">
+<div class="sc-row"><span class="cat-icon">${s.icon}</span><span class="sc-ticker">${s.ticker}</span><span class="sc-name">${s.companyName}</span><span class="score-badge ${badgeClass}">${s.score.toFixed(1)}</span></div>
+<div class="sc-row sc-tags"><span class="sc-tag ${capTagClass}">${capLabel} ${t('cap')}</span>${s.floatShares?`<span class="sc-tag">${t('float')}: ${(s.floatShares/1e6).toFixed(1)}M</span>`:''} ${s.shortPct?`<span class="sc-tag">${t('short')}: ${s.shortPct}%</span>`:''}<span class="sc-tag">${s.source}</span><span class="alva-data-badge"><svg width="10" height="10" viewBox="0 0 50 50" fill="none"><path d="M34.47 0.4C38.14-0.13 41.86-0.13 45.53 0.4c.29.04.59.09 1.18.18.2.03.29.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.29-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0c-10.87 0-19.72 8.68-19.99 19.48L20 40c0 1.85-.13 3.7-.4 5.53l-.18 1.18-.07.38c-.25 1.13-1.13 2.01-2.26 2.26l-.38.07-1.18.18c-3.67.53-7.39.53-11.06 0l-1.18-.18-.38-.07c-1.13-.25-2.01-1.13-2.26-2.26l-.07-.38-.18-1.18c-.53-3.67-.53-7.39 0-11.06l.18-1.18.07-.38c.25-1.13 1.13-2.01 2.26-2.26l.38-.07 1.18-.18C6.3 30.13 8.15 30 10 30v0c11-0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53l.18-1.18.07-.38C30.9 1.78 31.78.9 32.91.65l.38-.07 1.18-.18z" fill="#49A3A6"/><path d="M45.53 30.4c-3.67-.53-7.39-.53-11.06 0l-1.18.18-.38.07c-1.13.25-2.01 1.13-2.26 2.26l-.07.38-.18 1.18c-.53 3.67-.53 7.39 0 11.06l.18 1.18.07.38c.25 1.13 1.13 2.01 2.26 2.26l.38.07 1.18.18c3.67.53 7.39.53 11.06 0l1.18-.18.38-.07c1.13-.25 2.01-1.13 2.26-2.26l.07-.38.18-1.18c.53-3.67.53-7.39 0-11.06l-.18-1.18-.07-.38c-.25-1.13-1.13-2.01-2.26-2.26l-.38-.07-1.18-.18zM15.53 0.4C11.86-.13 8.14-.13 4.47 0.4l-1.18.18-.38.07C1.78.9.9 1.78.65 2.91l-.07.38-.18 1.18c-.53 3.67-.53 7.39 0 11.06l.18 1.18.07.38c.25 1.13 1.13 2.01 2.26 2.26l.38.07 1.18.18c3.67.53 7.39.53 11.06 0l1.18-.18.38-.07c1.13-.25 2.01-1.13 2.26-2.26l.07-.38.18-1.18c.53-3.67.53-7.39 0-11.06l-.18-1.18-.07-.38C19.1 1.78 18.22.9 17.09.65l-.38-.07-1.18-.18z" fill="black"/></svg>${t('badge.data')}</span></div>
+<div class="sc-summary">${s.summary} <span class="sc-type-label">(${catName(s.catType)})</span></div>
+<div class="sc-row"><span class="sc-price"><span class="from">$${s.wirePrice?.toFixed(2)||'?'}</span><span class="arrow">→</span><span class="to">$${s.currentPrice?.toFixed(2)||'?'}</span>${pctChange!==null?`<span class="pct ${pctClass}">(${pctChange>=0?'+':''}${pctChange.toFixed(1)}%)</span>`:''}</span><span class="sc-timer">⏱ ${timerStr}</span></div>
+<div class="sc-actions"><button class="sc-btn" onclick="showTradePlan('${s.id}')">${t('btn.plan')}</button><button class="sc-btn" onclick="selectDelayRace('${s.id}')">${t('btn.race')}</button><button class="sc-btn" onclick="selectBacktest('${s.catType}')">${t('btn.hist')}</button>${s.link&&s.link!=='#'?`<a class="sc-btn" href="${s.link}" target="_blank">${t('btn.source')}</a>`:''}</div></div>`;}).join('');updateHeaderStats();}
+function updateHeaderStats(){const today=new Date().toDateString();const todaySignals=STATE.signals.filter(s=>new Date(s.pubTime).toDateString()===today);document.getElementById('statTotal').textContent=todaySignals.length;document.getElementById('statActive').textContent=STATE.signals.filter(s=>s.active).length;if(STATE.signals.length>0){const best=[...STATE.signals].sort((a,b)=>{const aG=a.wirePrice&&a.peakPrice?(a.peakPrice/a.wirePrice-1):0;const bG=b.wirePrice&&b.peakPrice?(b.peakPrice/b.wirePrice-1):0;return bG-aG;})[0];const gain=best.wirePrice&&best.peakPrice?((best.peakPrice/best.wirePrice-1)*100).toFixed(0):0;document.getElementById('statBest').innerHTML=`<span>${best.ticker}</span> <span class="positive">+${gain}%</span>`;}}
+
+/* ═══ MODULE B — DELAY RACE ═══ */
+function selectDelayRace(id){switchTab('B');document.getElementById('raceSignalSelect').value=id;renderDelayRace();}
+function renderDelayRace(){const id=document.getElementById('raceSignalSelect').value;const container=document.getElementById('raceContainer');const signal=STATE.signals.find(s=>s.id===id);if(!signal||!signal.mediaDelays||!Object.keys(signal.mediaDelays).length){container.innerHTML=`<div class="empty-state"><div class="icon">⏱</div><p>${t('race.empty')}</p></div>`;return;}
+const channels=[{name:'PR Wire',color:'var(--main-m3)',delaySec:0,price:signal.wirePrice},{name:'Benzinga',color:'var(--chart-blue1)',...(signal.mediaDelays['Benzinga']||{delaySec:null})},{name:'Yahoo Finance',color:'var(--main-m5)',...(signal.mediaDelays['Yahoo Finance']||{delaySec:null})},{name:'Google News',color:'var(--main-m6)',...(signal.mediaDelays['Google News']||{delaySec:null})},{name:'Reddit',color:'var(--main-m4)',...(signal.mediaDelays['Reddit']||{delaySec:null})}];
+const maxDelay=Math.max(...channels.map(c=>c.delaySec||0),60);const totalGain=signal.peakPrice&&signal.wirePrice?(signal.peakPrice/signal.wirePrice-1)*100:0;
+let html='';channels.forEach(ch=>{const delaySec=ch.delaySec||0;const pct=Math.max(3,(delaySec/maxDelay)*100);const delayStr=delaySec===0?'0s (Origin)':delaySec<60?`${delaySec}s`:`${Math.floor(delaySec/60)}m ${delaySec%60}s`;const priceStr=ch.price?`$${ch.price.toFixed(2)}`:'--';const missed=ch.price&&signal.wirePrice&&signal.peakPrice?(((ch.price-signal.wirePrice)/(signal.peakPrice-signal.wirePrice))*totalGain).toFixed(0):null;
+html+=`<div class="race-lane"><div class="race-label">${ch.name}</div><div class="race-track"><div class="race-bar" style="width:${pct}%;background:${ch.color}">${delayStr}</div></div><div class="race-info">${priceStr} ${missed!==null&&delaySec>0?`<span class="race-missed">${t('race.missed')} ${missed}%</span>`:delaySec===0?`<span class="positive">⚡ ${t('race.first')}</span>`:''}</div></div>`;});
+const yfDelay=signal.mediaDelays['Yahoo Finance'];if(yfDelay){const missedPct=signal.wirePrice&&signal.peakPrice?(((yfDelay.price-signal.wirePrice)/(signal.peakPrice-signal.wirePrice))*100).toFixed(0):'?';html+=`<div class="race-summary">${t('race.summary.1')} <strong>${signal.ticker}</strong> ${t('race.summary.2')} <strong>$${signal.wirePrice?.toFixed(2)}</strong> ${t('race.summary.3')} <strong>$${yfDelay.price?.toFixed(2)}</strong>${t('race.summary.4')} <span class="negative">${missedPct}%</span> ${t('race.summary.5')} <span class="positive">+${totalGain.toFixed(0)}%</span> ${t('race.summary.6')}</div>`;}
+container.innerHTML=html;setTimeout(()=>{container.querySelectorAll('.race-bar').forEach(bar=>{const w=bar.style.width;bar.style.width='0%';requestAnimationFrame(()=>{bar.style.width=w;});});},50);}
+function populateRaceSelect(){const sel=document.getElementById('raceSignalSelect');const current=sel.value;sel.innerHTML=`<option value="">${t('race.select')}</option>`;STATE.signals.forEach(s=>{if(s.mediaDelays&&Object.keys(s.mediaDelays).length>0)sel.innerHTML+=`<option value="${s.id}">${s.ticker} — ${catName(s.catType)} (${s.score.toFixed(1)})</option>`;});if(current)sel.value=current;}
+
+/* ═══ MODULE C — BACKTEST ═══ */
+function toggleBtType(el){el.classList.toggle('active');renderBacktest();}
+function updateBtLabel(el){document.getElementById('btMcapLabel').textContent='$'+(el.value/1000).toFixed(1)+'B';}
+function selectBacktest(type){switchTab('C');document.querySelectorAll('#btTypeFilter label').forEach(l=>{l.classList.toggle('active',l.dataset.v===type);});renderBacktest();}
+function renderBacktest(){const activeTypes=[...document.querySelectorAll('#btTypeFilter label.active')].map(l=>l.dataset.v);const mcapMax=parseFloat(document.getElementById('btMcapMax').value)*1e6;const candidates=STATE.signals.filter(s=>{if(!activeTypes.includes(s.catType))return false;if(s.marketCap&&s.marketCap>mcapMax)return false;if(!s.priceHistory||s.priceHistory.length<5)return false;return true;});const statsEl=document.getElementById('btStats');if(!candidates.length){statsEl.innerHTML=`<div style="grid-column:1/-1" class="empty-state"><p>${t('bt.noData')}</p></div>`;return;}
+const gains=candidates.map(s=>{const peak=s.peakPrice&&s.wirePrice?(s.peakPrice/s.wirePrice-1)*100:0;return peak;}).sort((a,b)=>a-b);const peakTimes=candidates.map(s=>s.peakTime||15).sort((a,b)=>a-b);const median=arr=>arr[Math.floor(arr.length/2)];const winRate=(gains.filter(g=>g>10).length/gains.length*100).toFixed(0);
+const entryBuckets=[{label:'0-1m',min:0,max:1},{label:'1-3m',min:1,max:3},{label:'3-5m',min:3,max:5},{label:'5-10m',min:5,max:10},{label:'10-30m',min:10,max:30}];let bestEntry='0-1m',bestEntryReturn=0;entryBuckets.forEach(b=>{const avgReturn=candidates.reduce((sum,s)=>{if(!s.priceHistory)return sum;const entryIdx=Math.min(Math.floor((b.min+b.max)/2),s.priceHistory.length-1);const entryPrice=s.priceHistory[entryIdx]?.price||s.wirePrice;const peak=s.peakPrice||entryPrice;return sum+(peak/entryPrice-1)*100;},0)/candidates.length;if(avgReturn>bestEntryReturn){bestEntryReturn=avgReturn;bestEntry=b.label;}});
+statsEl.innerHTML=`<div class="bt-stat"><div class="lbl">${t('bt.samples')}</div><div class="val">${candidates.length}</div></div><div class="bt-stat"><div class="lbl">${t('bt.medianGain')}</div><div class="val positive">+${median(gains).toFixed(0)}%</div></div><div class="bt-stat"><div class="lbl">${t('bt.peakTime')}</div><div class="val">${median(peakTimes)}min</div></div><div class="bt-stat"><div class="lbl">${t('bt.bestEntry')}</div><div class="val" style="color:var(--main-m1)">${bestEntry}</div></div><div class="bt-stat"><div class="lbl">${t('bt.winRate')}</div><div class="val ${parseInt(winRate)>60?'positive':''}">${winRate}%</div></div>`;
+renderHistogram(gains);renderEntryDelayChart(candidates,entryBuckets);renderTrajectoryChart(candidates);}
+
+function renderHistogram(gains){const el=document.getElementById('btHistChart');if(!el)return;const chart=STATE.charts.btHist||echarts.init(el);STATE.charts.btHist=chart;const buckets=[{label:'0-20%',min:0,max:20,color:'#3d8bd1'},{label:'20-50%',min:20,max:50,color:'#2a9b7d'},{label:'50-100%',min:50,max:100,color:'#e6a91a'},{label:'100-200%',min:100,max:200,color:'#ff9800'},{label:'>200%',min:200,max:Infinity,color:'#e05357'}];const counts=buckets.map(b=>gains.filter(g=>g>=b.min&&g<b.max).length);chart.setOption({backgroundColor:'transparent',tooltip:{...TT,formatter:mkFmt()},xAxis:{type:'category',data:buckets.map(b=>b.label),boundaryGap:true,...AX},yAxis:{type:'value',...AX},series:[{type:'bar',data:counts.map((c,i)=>({value:c,itemStyle:{color:buckets[i].color}})),barMaxWidth:16,name:t('bt.gainDist')}],grid:{top:4,right:4,bottom:4,left:4,containLabel:true}});}
+
+function renderEntryDelayChart(candidates,entryBuckets){const el=document.getElementById('btEntryChart');if(!el)return;const chart=STATE.charts.btEntry||echarts.init(el);STATE.charts.btEntry=chart;const avgReturns=entryBuckets.map(b=>{const total=candidates.reduce((sum,s)=>{if(!s.priceHistory)return sum;const entryIdx=Math.min(Math.floor((b.min+b.max)/2),s.priceHistory.length-1);const entryPrice=s.priceHistory[entryIdx]?.price||s.wirePrice;const peak=s.peakPrice||entryPrice;return sum+(peak/entryPrice-1)*100;},0);return Math.round(total/candidates.length);});chart.setOption({backgroundColor:'transparent',tooltip:{...TT,formatter:mkFmt(v=>v+'%')},xAxis:{type:'category',data:entryBuckets.map(b=>b.label),boundaryGap:true,...AX},yAxis:{type:'value',...AX,axisLabel:{...AX.axisLabel,formatter:v=>v+'%'}},series:[{type:'bar',data:avgReturns,itemStyle:{color:'#49a3a6'},barMaxWidth:16,name:t('bt.entryDelay')}],grid:{top:4,right:4,bottom:4,left:4,containLabel:true}});}
+
+function renderTrajectoryChart(candidates){const el=document.getElementById('btTrajectoryChart');if(!el)return;const chart=STATE.charts.btTraj||echarts.init(el);STATE.charts.btTraj=chart;const series=[];const xData=Array.from({length:61},(_,i)=>i);candidates.forEach(s=>{if(!s.priceHistory||s.priceHistory.length<2)return;const gains=s.priceHistory.map(p=>p.gain!==undefined?p.gain*100:0);series.push({type:'line',data:gains,showSymbol:false,lineStyle:{width:1,color:'rgba(0,0,0,0.08)'},z:1,name:s.ticker,silent:true,smooth:.1});});
+if(candidates.length>0){const medianLine=xData.map(i=>{const vals=candidates.map(s=>{if(!s.priceHistory||i>=s.priceHistory.length)return null;return s.priceHistory[i].gain*100;}).filter(v=>v!==null).sort((a,b)=>a-b);return vals.length>0?vals[Math.floor(vals.length/2)]:0;});
+const p25Line=xData.map(i=>{const vals=candidates.map(s=>{if(!s.priceHistory||i>=s.priceHistory.length)return null;return s.priceHistory[i].gain*100;}).filter(v=>v!==null).sort((a,b)=>a-b);return vals.length>0?vals[Math.floor(vals.length*.25)]:0;});
+const p75Line=xData.map(i=>{const vals=candidates.map(s=>{if(!s.priceHistory||i>=s.priceHistory.length)return null;return s.priceHistory[i].gain*100;}).filter(v=>v!==null).sort((a,b)=>a-b);return vals.length>0?vals[Math.floor(vals.length*.75)]:0;});
+series.push({type:'line',data:p25Line,showSymbol:false,lineStyle:{width:0},areaStyle:{opacity:0},stack:'band',z:2,silent:true,name:'P25',smooth:.1});
+series.push({type:'line',data:p75Line.map((v,i)=>v-p25Line[i]),showSymbol:false,lineStyle:{width:0},areaStyle:{color:'rgba(73,163,166,0.12)'},stack:'band',z:2,silent:true,name:'P75',smooth:.1});
+series.push({type:'line',data:medianLine,showSymbol:false,lineStyle:{width:1,color:'#49a3a6'},z:3,name:'Median',smooth:.1,symbol:'circle',symbolSize:10,emphasis:{itemStyle:{borderColor:'#fff',borderWidth:1,color:'#49a3a6'}}});}
+chart.setOption({backgroundColor:'transparent',tooltip:{...TT,formatter:mkFmt(v=>(v>=0?'+':'')+v?.toFixed(1)+'%')},legend:{show:false},xAxis:{type:'category',data:xData,name:t('bt.xMinutes'),nameLocation:'center',nameGap:25,boundaryGap:false,...AX},yAxis:{type:'value',...AX,axisLabel:{...AX.axisLabel,formatter:v=>v+'%'}},series,grid:{top:4,right:4,bottom:28,left:4,containLabel:true},dataZoom:[{type:'inside'}]});}
+
+/* ═══ MODULE D — TRADE PLAN ═══ */
+function showTradePlan(id){const signal=STATE.signals.find(s=>s.id===id);if(!signal)return;const overlay=document.getElementById('tpOverlay');const panel=document.getElementById('tpPanel');const type=signal.catType;const medianGain=TYPE_HIST_MEDIAN[type]||.5;const p25Gain=TYPE_HIST_P25[type]||.2;const p75Gain=TYPE_HIST_P75[type]||1.0;const p0=signal.wirePrice||1;const currentP=signal.currentPrice||p0;const entryHigh=p0*(1+medianGain*.3);const overEntry=currentP>entryHigh;let posSize,posPct;if(signal.score>=8){posPct=5;posSize=CFG.accountSize*.05;}else if(signal.score>=6){posPct=3;posSize=CFG.accountSize*.03;}else if(signal.score>=5){posPct=1.5;posSize=CFG.accountSize*.015;}else{posPct=0;posSize=0;}const tp1=p0*(1+p25Gain);const tp2=p0*(1+medianGain);const tp3=p0*(1+p75Gain);const sl=p0*.9;
+panel.innerHTML=`<button class="tp-close" onclick="closeTradePlan()"><svg viewBox="0 0 16 16" fill="none"><path d="M12.517 2.917a.4.4 0 01.566.566L8.566 8l4.517 4.517a.4.4 0 01-.566.566L8 8.566l-4.517 4.517a.4.4 0 01-.566-.566L7.434 8 2.917 3.483a.4.4 0 01.566-.566L8 7.434l4.517-4.517z" fill="rgba(0,0,0,0.9)"/></svg></button>
+<div class="tp-header"><span style="font-size:22px">${signal.icon}</span><span style="font-size:22px;font-weight:400">${signal.ticker}</span><span style="color:var(--text-n7);font-size:14px">${signal.companyName}</span><span class="score-badge ${signal.score>=8?'high':signal.score>=5?'mid':'low'}" style="margin-left:auto">${signal.score.toFixed(1)}</span></div>
+<div class="tp-section"><h3>${t('tp.entry')}</h3><div class="tp-grid"><div class="tp-item"><div class="lbl">${t('tp.wirePrice')}</div><div class="val">$${p0.toFixed(2)}</div></div><div class="tp-item"><div class="lbl">${t('tp.entryLimit')}</div><div class="val">$${entryHigh.toFixed(2)}</div></div><div class="tp-item"><div class="lbl">${t('tp.current')}</div><div class="val ${overEntry?'red':'green'}">$${currentP.toFixed(2)}</div></div><div class="tp-item"><div class="lbl">${t('tp.entryWindow')}</div><div class="val">${((medianGain*.3)*100).toFixed(0)}% ${t('tp.ofMedian')}</div></div></div>${overEntry?`<div class="tp-warning">⚠ ${t('tp.overEntry')}</div>`:''}</div>
+<div class="tp-section"><h3>${t('tp.position')} (${t('tp.account')}: $${CFG.accountSize.toLocaleString()})</h3><div class="tp-grid"><div class="tp-item"><div class="lbl">${t('tp.alloc')}</div><div class="val ${posSize>0?'gold':'red'}">${posSize>0?posPct+'%':t('tp.watchOnly')}</div></div><div class="tp-item"><div class="lbl">${t('tp.posSize')}</div><div class="val">${posSize>0?'$'+posSize.toFixed(0):'--'}</div></div><div class="tp-item"><div class="lbl">${t('tp.shares')}</div><div class="val">${posSize>0?Math.floor(posSize/currentP):'--'}</div></div></div>${signal.score<5?`<div class="tp-warning">${t('tp.weakSignal')}</div>`:''}</div>
+<div class="tp-section"><h3>${t('tp.tpsl')}</h3><div class="tp-grid"><div class="tp-item"><div class="lbl">${t('tp.tp1')}</div><div class="val green">$${tp1.toFixed(2)} (+${(p25Gain*100).toFixed(0)}%)</div></div><div class="tp-item"><div class="lbl">${t('tp.tp2')}</div><div class="val green">$${tp2.toFixed(2)} (+${(medianGain*100).toFixed(0)}%)</div></div><div class="tp-item"><div class="lbl">${t('tp.tp3')}</div><div class="val green">$${tp3.toFixed(2)} (+${(p75Gain*100).toFixed(0)}%)</div></div><div class="tp-item"><div class="lbl">${t('tp.sl')}</div><div class="val red">$${sl.toFixed(2)} (-10%)</div></div><div class="tp-item"><div class="lbl">${t('tp.timeStop')}</div><div class="val">${t('tp.timeStopVal')}</div></div></div></div>
+<div class="tp-section"><h3>${t('tp.chart')}</h3><div class="chart-dotted-bg"><div class="tp-chart" id="tpChartEl"></div><div class="alva-watermark"><svg width="56" height="14" viewBox="0 0 50 20" fill="none"><path d="M13.79 0.16C15.26-.05 16.74-.05 18.21 0.16l.47.07.15.03c.45.1.8.45.9.9l.03.16.07.47c.21 1.47.21 2.96 0 4.43l-.07.47-.03.15c-.1.45-.45.8-.9.9l-.16.03-.47.07c-.73.11-1.47.16-2.21.16v0c-4.35 0-7.89 3.47-8 7.79L8 16c0 .74-.05 1.48-.16 2.21l-.07.47-.03.15c-.1.45-.45.8-.9.9l-.16.03-.47.07c-1.47.21-2.96.21-4.43 0l-.47-.07-.15-.03c-.45-.1-.8-.45-.9-.9l-.03-.16-.07-.47c-.21-1.47-.21-2.96 0-4.43l.07-.47.03-.15c.1-.45.45-.8.9-.9l.16-.03.47-.07C2.52 12.05 3.26 12 4 12v0c4.4 0 7.97-3.55 8-7.94L12 4c0-.74.05-1.48.16-2.21l.07-.47.03-.15c.1-.45.45-.8.9-.9l.16-.03.47-.07z" fill="#49A3A6"/><path d="M18.21 12.16c-1.47-.21-2.96-.21-4.43 0l-.47.07-.15.03c-.45.1-.8.45-.9.9l-.03.16-.07.47c-.21 1.47-.21 2.96 0 4.43l.07.47.03.15c.1.45.45.8.9.9l.16.03.47.07c1.47.21 2.96.21 4.43 0l.47-.07.15-.03c.45-.1.8-.45.9-.9l.03-.16.07-.47c.21-1.47.21-2.96 0-4.43l-.07-.47-.03-.15c-.1-.45-.45-.8-.9-.9l-.16-.03-.47-.07zM6.21 0.16C4.74-.05 3.26-.05 1.79 0.16l-.47.07-.15.03c-.45.1-.8.45-.9.9L.24 1.33l-.07.47c-.21 1.47-.21 2.96 0 4.43l.07.47.03.15c.1.45.45.8.9.9l.16.03.47.07c1.47.21 2.96.21 4.43 0l.47-.07.15-.03c.45-.1.8-.45.9-.9l.03-.16.07-.47c.21-1.47.21-2.96 0-4.43l-.07-.47-.03-.15c-.1-.45-.45-.8-.9-.9L6.68.23l-.47-.07z" fill="black"/></svg></div></div></div>`;
+overlay.classList.add('show');setTimeout(()=>renderTradePlanChart(signal,{tp1,tp2,tp3,sl,entryHigh,p0}),100);}
+
+function renderTradePlanChart(signal,levels){const el=document.getElementById('tpChartEl');if(!el)return;const chart=echarts.init(el);const ph=signal.priceHistory||[];const xData=ph.map(p=>p.minute);const prices=ph.map(p=>p.price);chart.setOption({backgroundColor:'transparent',tooltip:{...TT,formatter:mkFmt(v=>'$'+v?.toFixed(4))},xAxis:{type:'category',data:xData,name:'Minutes',nameLocation:'center',nameGap:25,boundaryGap:false,...AX},yAxis:{type:'value',...AX,axisLabel:{...AX.axisLabel,formatter:v=>'$'+v.toFixed(2)}},series:[{type:'line',data:prices,showSymbol:false,lineStyle:{width:1,color:'#3d8bd1'},smooth:.1,symbol:'circle',symbolSize:10,emphasis:{itemStyle:{borderColor:'#fff',borderWidth:1,color:'#3d8bd1'}},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(61,139,209,0.15)'},{offset:1,color:'transparent'}])},markLine:{symbol:'none',silent:true,data:[{yAxis:levels.tp1,lineStyle:{color:'#2a9b7d',type:[3,2],width:1},label:{formatter:'TP1 $'+levels.tp1.toFixed(2),color:'#2a9b7d',position:'end',fontSize:10}},{yAxis:levels.tp2,lineStyle:{color:'#2a9b7d',type:[3,2],width:1},label:{formatter:'TP2 $'+levels.tp2.toFixed(2),color:'#2a9b7d',position:'end',fontSize:10}},{yAxis:levels.tp3,lineStyle:{color:'#e6a91a',type:[3,2],width:1},label:{formatter:'TP3 $'+levels.tp3.toFixed(2),color:'#e6a91a',position:'end',fontSize:10}},{yAxis:levels.sl,lineStyle:{color:'#e05357',type:[3,2],width:1},label:{formatter:'SL $'+levels.sl.toFixed(2),color:'#e05357',position:'end',fontSize:10}},{yAxis:levels.p0,lineStyle:{color:'rgba(0,0,0,0.3)',type:[3,2],width:1},label:{formatter:'P0 $'+levels.p0.toFixed(2),color:'rgba(0,0,0,0.5)',position:'end',fontSize:10}}]},markArea:{silent:true,data:[[{yAxis:levels.p0,itemStyle:{color:'rgba(42,155,125,0.06)'}},{yAxis:levels.entryHigh}]]}}],grid:{top:4,right:80,bottom:28,left:4,containLabel:true},dataZoom:[{type:'inside'}]});}
+
+function closeTradePlan(){document.getElementById('tpOverlay').classList.remove('show');}
+
+/* ═══ ALERTS ═══ */
+const alertedIds=new Set();
+function checkNewAlerts(signal){if(signal.score>=7&&!alertedIds.has(signal.id)){alertedIds.add(signal.id);showFullScreenAlert(signal);if(CFG.alertSound)playAlertSound();}}
+function showFullScreenAlert(signal){document.getElementById('alertTicker').textContent=signal.ticker;document.getElementById('alertScore').textContent=`Score: ${signal.score.toFixed(1)} — ${catName(signal.catType)}`;document.getElementById('alertSummary').textContent=signal.summary;document.getElementById('alertOverlay').classList.add('show');}
+function dismissAlert(){document.getElementById('alertOverlay').classList.remove('show');}
+function playAlertSound(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const osc=ctx.createOscillator();const gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);osc.type='sine';osc.frequency.setValueAtTime(880,ctx.currentTime);osc.frequency.setValueAtTime(1100,ctx.currentTime+.15);gain.gain.setValueAtTime(.2,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.01,ctx.currentTime+.4);osc.start(ctx.currentTime);osc.stop(ctx.currentTime+.4);}catch(e){}}
+
+/* ═══ CLOCK & SETTINGS ═══ */
+function updateMarketClock(){const now=new Date();const etStr=now.toLocaleString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});document.getElementById('etTime').textContent='ET '+etStr;const etDate=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));const h=etDate.getHours(),m=etDate.getMinutes(),day=etDate.getDay();const mins=h*60+m;const el=document.getElementById('mktStatus');if(day===0||day===6){el.textContent=t('mkt.closed');el.className='mkt-badge closed';}else if(mins>=240&&mins<570){el.textContent=t('mkt.pre');el.className='mkt-badge pre';}else if(mins>=570&&mins<960){el.textContent=t('mkt.open');el.className='mkt-badge open';}else if(mins>=960&&mins<1200){el.textContent=t('mkt.after');el.className='mkt-badge after';}else{el.textContent=t('mkt.closed');el.className='mkt-badge closed';}}
+function showSettings(){document.getElementById('settingsModal').classList.add('show');}
+function closeSettings(){document.getElementById('settingsModal').classList.remove('show');}
+function saveSettings(){CFG.accountSize=parseFloat(document.getElementById('setAccountSize').value)||10000;CFG.alertSound=document.getElementById('setAlertSound').value==='on';CFG.refreshInterval=parseInt(document.getElementById('setRefreshInterval').value)||30;localStorage.setItem('prwire_cfg',JSON.stringify(CFG));closeSettings();}
+function loadSettings(){try{const saved=JSON.parse(localStorage.getItem('prwire_cfg'));if(saved)Object.assign(CFG,saved);document.getElementById('setAccountSize').value=CFG.accountSize;document.getElementById('setAlertSound').value=CFG.alertSound?'on':'off';document.getElementById('setRefreshInterval').value=CFG.refreshInterval;}catch(e){}}
+
+/* ═══ TABS ═══ */
+function switchTab(mod){STATE.activeTab=mod;document.querySelectorAll('.nav-tab').forEach(tt=>tt.classList.toggle('active',tt.dataset.mod===mod));document.querySelectorAll('.module').forEach(m=>m.classList.toggle('active',m.id==='mod'+mod));if(mod==='B'){populateRaceSelect();renderDelayRace();}if(mod==='C')renderBacktest();resizeCharts();}
+function resizeCharts(){Object.values(STATE.charts).forEach(c=>c?.resize?.());}
+window.addEventListener('resize',resizeCharts);
+
+/* ═══ POLLING ═══ */
+async function pollRSSFeeds(){try{const items=await fetchAllRSS();items.sort((a,b)=>{const da=a.pubDate?new Date(a.pubDate).getTime():0;const db=b.pubDate?new Date(b.pubDate).getTime():0;return db-da;});const MAX_PROCESS=8;let newCount=0,processed=0;for(const item of items){if(processed>=MAX_PROCESS)break;const id=item.guid||item.title;if(STATE.seenIds.has(id))continue;const ticker=extractTicker(item.title,item.description);if(!ticker){STATE.seenIds.add(id);continue;}processed++;const signal=await processRSSItem(item);if(signal){STATE.signals.unshift(signal);checkNewAlerts(signal);newCount++;}}for(const item of items){STATE.seenIds.add(item.guid||item.title);}STATE.lastPollTime=Date.now();document.getElementById('lastPoll').textContent=`${t('poll.last')} ${new Date().toLocaleTimeString()} (${newCount} ${t('poll.new')}, ${items.length} ${t('poll.scanned')})`;document.getElementById('connDot').className='conn-dot on';}catch(e){document.getElementById('connDot').className='conn-dot off';}renderSignals();populateRaceSelect();}
+
+/* ═══ INIT ═══ */
+async function init(){loadSettings();const savedLang=localStorage.getItem('prwire_lang');if(savedLang)LANG=savedLang;setLang(LANG);updateMarketClock();setInterval(updateMarketClock,1000);const demos=loadDemoData();demos.forEach(d=>{STATE.signals.push(d);STATE.seenIds.add(d.id);});document.getElementById('lastPoll').textContent=t('lastPoll.init');renderSignals();renderBacktest();populateRaceSelect();setInterval(renderSignals,1000);await pollRSSFeeds();setInterval(pollRSSFeeds,CFG.refreshInterval*1000);}
+init();
+</script>
+</body>
+</html>
