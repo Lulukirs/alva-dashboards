@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SPY Pre-Market Alpha — ML Prediction Engine</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+@font-face{font-family:'Delight';src:url('Delight-Regular.ttf') format('truetype');font-weight:400}
+@font-face{font-family:'Delight';src:url('Delight-Medium.ttf') format('truetype');font-weight:500}
+:root{
+  --text-n9:rgba(0,0,0,0.9);--text-n7:rgba(0,0,0,0.7);--text-n5:rgba(0,0,0,0.5);--text-n3:rgba(0,0,0,0.3);--text-n2:rgba(0,0,0,0.2);
+  --main-m1:#49a3a6;--main-m3:#2a9b7d;--main-m3-10:rgba(42,155,125,0.1);--main-m4:#e05357;--main-m4-10:rgba(224,83,87,0.1);--main-m5:#e6a91a;--main-m5-10:rgba(230,169,26,0.1);--main-m6:#ff9800;
+  --b0-page:#ffffff;--grey-g01:#fafafa;--b-r02:rgba(0,0,0,0.02);
+  --line-l07:rgba(0,0,0,0.07);--line-l05:rgba(0,0,0,0.05);--line-l12:rgba(0,0,0,0.12);
+  --chart-blue1:#3d8bd1;--chart-purple1:#5f75c9;--chart-green1:#40a544;--chart-orange1:#ff9800;--chart-red1:#c76466;--chart-cyan1:#0d7498;
+  --sp-xs:8px;--sp-s:12px;--sp-m:16px;--sp-l:20px;--sp-xl:24px;--sp-xxl:32px;
+  --r-s:4px;--r-m:6px;--r-l:8px;
+  --font:'Delight',-apple-system,BlinkMacSystemFont,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--b0-page);color:var(--text-n9);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+.page{max-width:1280px;margin:0 auto;padding:var(--sp-xl) var(--sp-xl) 60px}
+/* ── Header ── */
+.page-hdr{display:flex;align-items:center;gap:var(--sp-m);margin-bottom:var(--sp-xs);flex-wrap:wrap}
+.hdr-logo{display:flex;align-items:center;gap:var(--sp-xs)}
+.hdr-title{font-size:20px;font-weight:400;letter-spacing:0.2px}
+.hdr-title b{font-weight:500;color:var(--main-m1)}
+.hdr-sub{font-size:12px;color:var(--text-n5);border-left:1px solid var(--line-l07);padding-left:var(--sp-xs)}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:var(--sp-s)}
+.hdr-date{font-size:12px;color:var(--text-n5);font-family:var(--mono)}
+.lang-tog{display:flex;gap:2px;background:var(--grey-g01);border:1px solid var(--line-l12);border-radius:var(--r-s);padding:1px}
+.lang-btn{background:none;border:none;color:var(--text-n5);font-size:11px;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:var(--font)}
+.lang-btn.on{background:var(--main-m1);color:#fff}
+/* ── Nav ── */
+.tab-nav{display:flex;gap:0;border-bottom:1px solid var(--line-l07);margin-bottom:var(--sp-xl)}
+.tab-btn{background:none;border:none;color:var(--text-n5);font-size:13px;font-family:var(--font);padding:var(--sp-s) var(--sp-m);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab-btn:hover{color:var(--text-n7)}
+.tab-btn.on{color:var(--main-m1);border-bottom-color:var(--main-m1)}
+/* ── Widget Grid ── */
+.wg{display:grid;grid-template-columns:repeat(8,1fr);gap:var(--sp-xl);align-items:stretch}
+.col-2{grid-column:span 2}.col-3{grid-column:span 3}.col-4{grid-column:span 4}.col-5{grid-column:span 5}.col-6{grid-column:span 6}.col-8{grid-column:span 8}
+@media(max-width:768px){.wg{grid-template-columns:repeat(4,1fr);gap:var(--sp-m)}.col-3,.col-4,.col-5,.col-6,.col-8{grid-column:span 4}}
+/* ── Widget Card ── */
+.wc{background:transparent;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.wc-title{display:flex;align-items:center;justify-content:space-between;height:22px;margin-bottom:var(--sp-m)}
+.wc-title-text{font-size:14px;font-weight:400;color:var(--text-n9);letter-spacing:0.14px}
+.wc-ts{font-size:12px;color:var(--text-n5)}
+.wc-body{border-radius:var(--r-s);position:relative}
+.wc-body.fill{flex:1;height:0}
+.chart-bg{background-color:#fff;background-image:radial-gradient(circle,rgba(0,0,0,0.18) 0.6px,transparent 0.6px);background-size:3px 3px;padding:var(--sp-m);border-radius:var(--r-s);position:relative}
+.feed-bg{background:var(--grey-g01);border-radius:var(--r-s);padding:var(--sp-m);position:relative}
+.alva-wm{position:absolute;bottom:var(--sp-m);left:var(--sp-m);opacity:0.2;line-height:0}
+.alva-wm svg{display:block}
+/* ── Section title ── */
+.sec-title{display:inline-flex;align-items:center;gap:12px;margin-bottom:var(--sp-xl)}
+.sec-title-icon{font-size:22px;line-height:1}
+.sec-title-text{font-size:22px;font-weight:400;color:var(--text-n9);letter-spacing:0.3px}
+.sec-title-sub{font-size:11px;color:var(--text-n5);padding-left:8px;border-left:1px solid var(--line-l07)}
+/* ── Module views ── */
+.mod{display:none}.mod.on{display:block}
+/* ── Prediction Card ── */
+.pred-card{background:var(--grey-g01);border-radius:var(--r-l);padding:var(--sp-xxl);display:flex;gap:var(--sp-xxl);align-items:center;flex-wrap:wrap}
+.pred-dir{display:flex;flex-direction:column;align-items:center;min-width:160px}
+.pred-arrow{font-size:56px;line-height:1}
+.pred-label{font-size:28px;font-weight:400;margin-top:var(--sp-xs)}
+.pred-label.bull{color:var(--main-m3)}.pred-label.bear{color:var(--main-m4)}
+.pred-conf{text-align:center;min-width:120px}
+.pred-conf .n{font-size:36px;font-weight:400;font-family:var(--mono)}
+.pred-conf .l{font-size:12px;color:var(--text-n5);margin-top:2px}
+.pred-score-wrap{text-align:center;min-width:120px}
+.pred-score-ring{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:32px;font-weight:500;font-family:var(--mono);color:#fff}
+.pred-score-ring.high{background:var(--main-m3)}.pred-score-ring.mid{background:var(--main-m5)}.pred-score-ring.low{background:var(--text-n3)}
+.pred-rec{flex:1;min-width:200px;padding:var(--sp-m);background:var(--b0-page);border-radius:var(--r-m)}
+.pred-rec-title{font-size:13px;font-weight:500;margin-bottom:var(--sp-xs)}
+.pred-rec-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text-n7);padding:4px 0;border-bottom:1px solid var(--line-l05)}
+.pred-rec-row:last-child{border:none}
+.pred-rec-row .v{font-weight:500;color:var(--text-n9)}
+/* ── Feature contribution ── */
+.feat-bar{display:flex;align-items:center;gap:var(--sp-xs);padding:6px 0;border-bottom:1px solid var(--line-l05);font-size:12px}
+.feat-bar:last-child{border:none}
+.feat-bar .name{width:200px;flex-shrink:0;color:var(--text-n7)}
+.feat-bar .val{width:70px;text-align:right;font-family:var(--mono);font-weight:500;flex-shrink:0}
+.feat-bar .bar-wrap{flex:1;height:6px;background:rgba(0,0,0,0.04);border-radius:3px;overflow:hidden}
+.feat-bar .bar-fill{height:100%;border-radius:3px;transition:width .6s}
+.feat-bar .pct{width:50px;text-align:right;font-family:var(--mono);color:var(--text-n5);flex-shrink:0}
+/* ── Feature Monitor Grid ── */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--sp-m)}
+.feat-card{background:var(--grey-g01);border-radius:var(--r-m);padding:var(--sp-m);position:relative}
+.feat-card.anomaly{outline:2px solid var(--main-m4);outline-offset:-2px}
+.feat-card .fc-name{font-size:12px;color:var(--text-n5);margin-bottom:4px}
+.feat-card .fc-val{font-size:20px;font-weight:400;font-family:var(--mono)}
+.feat-card .fc-dev{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:11px;color:var(--text-n5)}
+.fc-dev-bar{width:80px;height:4px;background:rgba(0,0,0,0.06);border-radius:2px;position:relative;overflow:hidden}
+.fc-dev-fill{height:100%;border-radius:2px;position:absolute;top:0}
+.fc-dev-fill.pos{background:var(--main-m3);left:50%}.fc-dev-fill.neg{background:var(--main-m4);right:50%}
+.fc-badge{position:absolute;top:var(--sp-xs);right:var(--sp-xs);font-size:9px;padding:1px 6px;border-radius:8px;font-weight:500}
+.fc-badge.warn{background:var(--main-m4-10);color:var(--main-m4)}
+/* ── Backtest ── */
+.bt-row{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:var(--sp-m)}
+.bt-day{width:14px;height:14px;border-radius:2px;cursor:pointer;transition:transform .1s}
+.bt-day:hover{transform:scale(1.6);z-index:1}
+.bt-day.correct{background:var(--main-m3)}.bt-day.wrong{background:var(--main-m4)}.bt-day.neutral{background:rgba(0,0,0,0.06)}
+.bt-legend{display:flex;gap:var(--sp-m);font-size:11px;color:var(--text-n5);margin-bottom:var(--sp-xl)}
+.bt-legend span{display:flex;align-items:center;gap:4px}
+.bt-legend .dot{width:10px;height:10px;border-radius:2px}
+/* ── KPI ── */
+.kpi{text-align:center;padding:var(--sp-m);background:var(--grey-g01);border-radius:var(--r-m)}
+.kpi .n{font-size:28px;font-weight:400;font-family:var(--mono)}
+.kpi .l{font-size:11px;color:var(--text-n5);margin-top:2px}
+.kpi .n.pos{color:var(--main-m3)}.kpi .n.neg{color:var(--main-m4)}.kpi .n.warn{color:var(--main-m5)}
+/* ── Confusion Matrix ── */
+.cm-table{border-collapse:collapse;font-size:13px;margin:0 auto}
+.cm-table th,.cm-table td{padding:var(--sp-s) var(--sp-l);text-align:center;border:1px solid var(--line-l07)}
+.cm-table th{background:var(--grey-g01);color:var(--text-n7);font-weight:400}
+.cm-table td{font-family:var(--mono);font-weight:500}
+.cm-tp{background:rgba(42,155,125,0.1);color:var(--main-m3)}.cm-tn{background:rgba(42,155,125,0.06);color:var(--main-m3)}
+.cm-fp{background:rgba(224,83,87,0.08);color:var(--main-m4)}.cm-fn{background:rgba(224,83,87,0.06);color:var(--main-m4)}
+/* ── Live chart alert ── */
+.alert-flip{background:var(--main-m4-10);border:1px solid var(--main-m4);border-radius:var(--r-m);padding:var(--sp-s) var(--sp-m);font-size:13px;color:var(--main-m4);display:none;margin-bottom:var(--sp-m)}
+/* ── Trade Plan ── */
+.tp-card{background:var(--grey-g01);border-radius:var(--r-l);padding:var(--sp-xl)}
+.tp-row{display:flex;gap:var(--sp-m);padding:var(--sp-s) 0;border-bottom:1px solid var(--line-l05);font-size:13px}
+.tp-row:last-child{border:none}
+.tp-row .tp-k{width:140px;flex-shrink:0;color:var(--text-n5)}
+.tp-row .tp-v{font-weight:500}
+/* ── Footer ── */
+.page-foot{text-align:center;padding:var(--sp-xl) 0 var(--sp-m);font-size:11px;color:var(--text-n3);display:flex;align-items:center;justify-content:center;gap:6px}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="page-hdr">
+    <div class="hdr-logo"><svg width="20" height="20" viewBox="0 0 50 50" fill="none"><path d="M34.47.4C38.14-.13 41.86-.13 45.53.4c.29.04.59.09 1.18.18.2.03.3.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.3-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0C29.13 20 20.28 28.68 20.01 39.48L20 40c0 1.85-.13 3.7-.4 5.53-.04.29-.09.59-.18 1.18-.03.2-.05.3-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18C11.86 50.13 8.14 50.13 4.47 49.6c-.29-.04-.59-.09-1.18-.18-.2-.03-.3-.05-.38-.07C1.78 49.1.9 48.22.65 47.09.63 47.01.61 46.91.58 46.71.49 46.12.44 45.83.4 45.53c-.53-3.67-.53-7.39 0-11.06.04-.29.09-.59.18-1.18.03-.2.05-.3.07-.38.25-1.13 1.13-2.01 2.26-2.26.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18C6.3 30.13 8.15 30 10 30v0c11 0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53.04-.29.09-.59.18-1.18.03-.2.05-.3.07-.38C30.9 1.78 31.78.9 32.91.65c.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18Z" fill="#49A3A6"/><path d="M45.53 30.4c-3.67-.53-7.39-.53-11.06 0-.29.04-.59.09-1.18.18-.2.03-.3.05-.38.07-1.13.25-2.01 1.13-2.26 2.26-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.3.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.3-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.03-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.3-.07-.38-.25-1.13-1.13-2.01-2.26-2.26-.09-.02-.19-.04-.38-.07-.59-.09-.88-.14-1.18-.18ZM15.53.4C11.86-.13 8.14-.13 4.47.4c-.29.04-.59.09-1.18.18-.2.03-.3.05-.38.07C1.78.9.9 1.78.65 2.91.63 3 .61 3.09.58 3.29.49 3.88.44 4.18.4 4.47c-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.3.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.3-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.3-.07-.38C19.1.9 18.22.9 17.09.65c-.09-.02-.19-.03-.38-.07-.59-.09-.88-.14-1.18-.18Z" fill="black"/></svg></div>
+    <h1 class="hdr-title"><b>SPY</b> Pre-Market Alpha</h1>
+    <span class="hdr-sub" data-i18n="hdr.sub">LightGBM ML Prediction Engine · 24 Features</span>
+    <div class="hdr-right">
+      <span class="hdr-date" id="hdrDate"></span>
+      <div class="lang-tog"><button class="lang-btn on" data-lang="en" onclick="setLang('en')">EN</button><button class="lang-btn" data-lang="zh" onclick="setLang('zh')">中文</button></div>
+    </div>
+  </header>
+
+  <nav class="tab-nav">
+    <button class="tab-btn on" data-t="pred" onclick="switchTab('pred')">📊 <span data-i18n="tab.pred">Today's Prediction</span></button>
+    <button class="tab-btn" data-t="feat" onclick="switchTab('feat')">🔬 <span data-i18n="tab.feat">Feature Monitor</span></button>
+    <button class="tab-btn" data-t="back" onclick="switchTab('back')">📅 <span data-i18n="tab.back">Backtest</span></button>
+    <button class="tab-btn" data-t="model" onclick="switchTab('model')">🧠 <span data-i18n="tab.model">Model Health</span></button>
+  </nav>
+
+  <!-- ═══ TAB 1: TODAY'S PREDICTION ═══ -->
+  <div class="mod on" id="mPred">
+    <div class="sec-title"><span class="sec-title-icon">⚡</span><span class="sec-title-text" data-i18n="s.pred">Pre-Market Prediction</span><span class="sec-title-sub" data-i18n="s.predSub">Updated at 09:25 ET · Model v3.2</span></div>
+    <div class="pred-card" id="predCard"></div>
+    <div class="wg" style="margin-top:var(--sp-xl)">
+      <div class="wc col-5">
+        <div class="wc-title"><span class="wc-title-text" data-i18n="w.topFeat">Top 5 Feature Contributions</span></div>
+        <div class="wc-body feed-bg" id="topFeats"></div>
+      </div>
+      <div class="wc col-3">
+        <div class="wc-title"><span class="wc-title-text" data-i18n="w.liveConf">Live Confidence (9:00–9:30)</span><span class="wc-ts" data-i18n="w.every5">Every 5 min</span></div>
+        <div class="alert-flip" id="alertFlip">⚠ <span data-i18n="alert.flip">Direction flip detected! Confidence has reversed.</span></div>
+        <div class="wc-body chart-bg"><div id="liveChart" style="width:100%;height:220px"></div><div class="alva-wm"><svg width="56" height="14" viewBox="0 0 203 52" fill="none"><path d="M184 10.4c2.9 0 5.5.38 7.8 1.14 2.3.76 4.2 1.85 5.8 3.29 1.6 1.43 2.8 3.19 3.7 5.26.8 2.07 1.3 4.42 1.3 7.04V50h-8.8V39.9c-.5 1.72-1.1 3.28-2.1 4.66-.9 1.38-2 2.55-3.3 3.52-1.3.96-2.8 1.69-4.5 2.2-1.7.51-3.5.77-5.4.77-2 0-3.9-.28-5.6-.84-1.7-.55-3.1-1.32-4.3-2.33-1.2-1-2.1-2.21-2.8-3.62-.6-1.42-.9-3-.9-4.76 0-1.8.4-3.4 1.1-4.82.7-1.42 1.7-2.63 3-3.62 1.3-.99 3-1.75 4.9-2.27 1.9-.54 4.1-.8 6.5-.8H194v-.89c0-1.46-.2-2.77-.7-3.92-.5-1.17-1.1-2.16-2-2.97-.8-.82-1.8-1.44-3.1-1.87-1.2-.43-2.6-.65-4.1-.65-1.6 0-2.9.18-4.1.54-1.1.35-2.1.85-2.8 1.5-.7.66-1.3 1.44-1.6 2.36-.4.92-.6 1.95-.6 3.09h-8.8c0-2.27.4-4.32 1.3-6.15.8-1.83 2-3.39 3.5-4.67 1.6-1.29 3.5-2.29 5.7-2.97 2.2-.69 4.7-1.03 7.5-1.03ZM109 50H99l-4-11.8H73.6L69.6 50H60l18-50h13.2L109 50Zm12.2 0h-8.8V0h8.8v50Zm23.6-5.5L155.5 11.5h9l-13.4 38.5h-12.8L125 11.5h9.2l10.6 33Zm19-9.3c-2.4 0-4.2.4-5.4 1.2-1.2.8-1.8 2-1.8 3.6 0 1.65.7 2.92 2 3.8 1.4.87 3.3 1.31 5.9 1.31 1.8 0 3.4-.22 4.9-.65 1.5-.44 2.8-1.06 3.9-1.84 1.1-.78 2-1.7 2.6-2.77.6-1.08.9-2.26.9-3.53v-1.1h-12.9ZM76.2 30.4h16.3l-8.1-24.2-8.2 24.2Z" fill="rgba(0,0,0,0.12)"/></svg></div></div>
+      </div>
+    </div>
+    <div style="margin-top:var(--sp-xl)">
+      <div class="sec-title"><span class="sec-title-icon">📋</span><span class="sec-title-text" data-i18n="s.plan">Trade Plan</span></div>
+      <div class="tp-card" id="tradePlan"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 2: FEATURE MONITOR ═══ -->
+  <div class="mod" id="mFeat">
+    <div class="sec-title"><span class="sec-title-icon">🔬</span><span class="sec-title-text" data-i18n="s.feat">24-Feature Real-Time Monitor</span><span class="sec-title-sub" data-i18n="s.featSub">Red outline = anomaly (>2σ deviation)</span></div>
+    <div class="feat-grid" id="featGrid"></div>
+  </div>
+
+  <!-- ═══ TAB 3: BACKTEST ═══ -->
+  <div class="mod" id="mBack">
+    <div class="sec-title"><span class="sec-title-icon">📅</span><span class="sec-title-text" data-i18n="s.back">90-Day Prediction Backtest</span></div>
+    <div class="wg">
+      <div class="wc col-8">
+        <div class="wc-title"><span class="wc-title-text" data-i18n="w.daily">Daily Prediction Results</span></div>
+        <div class="wc-body">
+          <div class="bt-legend"><span><div class="dot" style="background:var(--main-m3)"></div> <span data-i18n="bt.correct">Correct</span></span><span><div class="dot" style="background:var(--main-m4)"></div> <span data-i18n="bt.wrong">Wrong</span></span></div>
+          <div class="bt-row" id="btRow"></div>
+        </div>
+      </div>
+      <div class="wc col-2"><div class="kpi"><div class="n pos" id="btAcc">—</div><div class="l" data-i18n="bt.overall">Overall Accuracy</div></div></div>
+      <div class="wc col-2"><div class="kpi"><div class="n pos" id="btHigh">—</div><div class="l" data-i18n="bt.high">Score ≥8 WinRate</div></div></div>
+      <div class="wc col-2"><div class="kpi"><div class="n warn" id="btMid">—</div><div class="l" data-i18n="bt.mid">Score 6-7 WinRate</div></div></div>
+      <div class="wc col-2"><div class="kpi"><div class="n neg" id="btLow">—</div><div class="l" data-i18n="bt.low">Score <6 WinRate</div></div></div>
+    </div>
+    <div class="wg" style="margin-top:var(--sp-xl)">
+      <div class="wc col-4">
+        <div class="wc-title"><span class="wc-title-text" data-i18n="w.byScore">Accuracy by Signal Strength</span></div>
+        <div class="wc-body chart-bg"><div id="btScoreChart" style="width:100%;height:260px"></div></div>
+      </div>
+      <div class="wc col-4">
+        <div class="wc-title"><span class="wc-title-text" data-i18n="w.byDay">Accuracy by Day of Week</span></div>
+        <div class="wc-body chart-bg"><div id="btDayChart" style="width:100%;height:260px"></div></div>
+      </div>
+      <div class="wc col-2"><div class="kpi"><div class="n" id="btStreak" style="color:var(--main-m3)">—</div><div class="l" data-i18n="bt.winStreak">Best Win Streak</div></div></div>
+      <div class="wc col-2"><div class="kpi"><div class="n" id="btLoss" style="color:var(--main-m4)">—</div><div class="l" data-i18n="bt.lossStreak">Worst Loss Streak</div></div></div>
+      <div class="wc col-2"><div class="kpi"><div class="n" style="color:var(--main-m1)" id="btTotal">—</div><div class="l" data-i18n="bt.total">Total Predictions</div></div></div>
+      <div class="wc col-2"><div class="kpi"><div class="n" id="btHighImp">—</div><div class="l" data-i18n="bt.highImp">High-Impact Signals</div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 4: MODEL HEALTH ═══ -->
+  <div class="mod" id="mModel">
+    <div class="sec-title"><span class="sec-title-icon">🧠</span><span class="sec-title-text" data-i18n="s.model">Model Performance Dashboard</span><span class="sec-title-sub">LightGBM v3.2 · AUC 0.682</span></div>
+    <div class="wg">
+      <div class="wc col-3">
+        <div class="wc-title"><span class="wc-title-text" data-i18n="w.cm">Confusion Matrix (Test Set)</span></div>
+        <div class="wc-body feed-bg" style="display:flex;justify-content:center;padding:var(--sp-xl)">
+          <table class="cm-table"><tr><th></th><th data-i18n="cm.predUp">Pred ↑</th><th data-i18n="cm.predDn">Pred ↓</th></tr><tr><th data-i18n="cm.actUp">Actual ↑</th><td class="cm-tp" id="cmTP">—</td><td class="cm-fn" id="cmFN">—</td></tr><tr><th data-i18n="cm.actDn">Actual ↓</th><td class="cm-fp" id="cmFP">—</td><td class="cm-tn" id="cmTN">—</td></tr></table>
+        </div>
+      </div>
+      <div class="wc col-5">
+        <div class="wc-title"><span class="wc-title-text" data-i18n="w.roc">ROC Curve</span><span class="wc-ts">AUC = 0.682</span></div>
+        <div class="wc-body chart-bg"><div id="rocChart" style="width:100%;height:280px"></div><div class="alva-wm"><svg width="56" height="14" viewBox="0 0 203 52" fill="none"><path d="M184 10.4c2.9 0 5.5.38 7.8 1.14 2.3.76 4.2 1.85 5.8 3.29 1.6 1.43 2.8 3.19 3.7 5.26.8 2.07 1.3 4.42 1.3 7.04V50h-8.8V39.9c-.5 1.72-1.1 3.28-2.1 4.66-.9 1.38-2 2.55-3.3 3.52-1.3.96-2.8 1.69-4.5 2.2-1.7.51-3.5.77-5.4.77-2 0-3.9-.28-5.6-.84-1.7-.55-3.1-1.32-4.3-2.33-1.2-1-2.1-2.21-2.8-3.62-.6-1.42-.9-3-.9-4.76 0-1.8.4-3.4 1.1-4.82.7-1.42 1.7-2.63 3-3.62 1.3-.99 3-1.75 4.9-2.27 1.9-.54 4.1-.8 6.5-.8H194v-.89c0-1.46-.2-2.77-.7-3.92-.5-1.17-1.1-2.16-2-2.97-.8-.82-1.8-1.44-3.1-1.87-1.2-.43-2.6-.65-4.1-.65-1.6 0-2.9.18-4.1.54-1.1.35-2.1.85-2.8 1.5-.7.66-1.3 1.44-1.6 2.36-.4.92-.6 1.95-.6 3.09h-8.8c0-2.27.4-4.32 1.3-6.15.8-1.83 2-3.39 3.5-4.67 1.6-1.29 3.5-2.29 5.7-2.97 2.2-.69 4.7-1.03 7.5-1.03ZM109 50H99l-4-11.8H73.6L69.6 50H60l18-50h13.2L109 50Zm12.2 0h-8.8V0h8.8v50Zm23.6-5.5L155.5 11.5h9l-13.4 38.5h-12.8L125 11.5h9.2l10.6 33Zm19-9.3c-2.4 0-4.2.4-5.4 1.2-1.2.8-1.8 2-1.8 3.6 0 1.65.7 2.92 2 3.8 1.4.87 3.3 1.31 5.9 1.31 1.8 0 3.4-.22 4.9-.65 1.5-.44 2.8-1.06 3.9-1.84 1.1-.78 2-1.7 2.6-2.77.6-1.08.9-2.26.9-3.53v-1.1h-12.9ZM76.2 30.4h16.3l-8.1-24.2-8.2 24.2Z" fill="rgba(0,0,0,0.12)"/></svg></div></div>
+      </div>
+      <div class="wc col-8">
+        <div class="wc-title"><span class="wc-title-text" data-i18n="w.fimp">Global Feature Importance (Top 15)</span></div>
+        <div class="wc-body chart-bg"><div id="fimpChart" style="width:100%;height:360px"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="page-foot">
+    <svg width="14" height="14" viewBox="0 0 50 50" fill="none"><path d="M34.47.4C38.14-.13 41.86-.13 45.53.4c.29.04.59.09 1.18.18.2.03.3.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.3-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0C29.13 20 20.28 28.68 20.01 39.48L20 40c0 1.85-.13 3.7-.4 5.53-.04.29-.09.59-.18 1.18-.03.2-.05.3-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18C11.86 50.13 8.14 50.13 4.47 49.6c-.29-.04-.59-.09-1.18-.18-.2-.03-.3-.05-.38-.07C1.78 49.1.9 48.22.65 47.09.63 47.01.61 46.91.58 46.71.49 46.12.44 45.83.4 45.53c-.53-3.67-.53-7.39 0-11.06.04-.29.09-.59.18-1.18.03-.2.05-.3.07-.38.25-1.13 1.13-2.01 2.26-2.26.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18C6.3 30.13 8.15 30 10 30v0c11 0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53.04-.29.09-.59.18-1.18.03-.2.05-.3.07-.38C30.9 1.78 31.78.9 32.91.65c.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18Z" fill="#49A3A6"/></svg>
+    <span data-i18n="footer">Powered by Alva — LightGBM prediction, OpenAlva data feeds & managed analytics</span>
+  </footer>
+</div>
+
+<script>
+/* ═══════════════════════ I18N ═══════════════════════ */
+const I18N={
+en:{
+'hdr.sub':'LightGBM ML Prediction Engine · 24 Features',
+'tab.pred':"Today's Prediction",'tab.feat':'Feature Monitor','tab.back':'Backtest','tab.model':'Model Health',
+'s.pred':'Pre-Market Prediction','s.predSub':'Updated at 09:25 ET · Model v3.2',
+'s.plan':'Trade Plan','s.feat':'24-Feature Real-Time Monitor','s.featSub':'Red outline = anomaly (>2σ deviation)',
+'s.back':'90-Day Prediction Backtest','s.model':'Model Performance Dashboard',
+'w.topFeat':'Top 5 Feature Contributions','w.liveConf':'Live Confidence (9:00–9:30)','w.every5':'Every 5 min',
+'w.daily':'Daily Prediction Results','w.byScore':'Accuracy by Signal Strength','w.byDay':'Accuracy by Day of Week',
+'w.cm':'Confusion Matrix (Test Set)','w.roc':'ROC Curve','w.fimp':'Global Feature Importance (Top 15)',
+'alert.flip':'Direction flip detected! Confidence has reversed.',
+'bt.correct':'Correct','bt.wrong':'Wrong','bt.overall':'Overall Accuracy','bt.high':'Score ≥8 Win Rate',
+'bt.mid':'Score 6-7 Win Rate','bt.low':'Score <6 Win Rate','bt.winStreak':'Best Win Streak','bt.lossStreak':'Worst Loss Streak',
+'bt.total':'Total Predictions','bt.highImp':'High-Impact Signals',
+'cm.predUp':'Pred ↑','cm.predDn':'Pred ↓','cm.actUp':'Actual ↑','cm.actDn':'Actual ↓',
+'p.dir':'Direction','p.conf':'Confidence','p.score':'Signal Score','p.rec':'Recommendation',
+'p.bull':'BULLISH','p.bear':'BEARISH','p.strong':'Strong Signal','p.medium':'Medium Signal','p.weak':'Weak Signal',
+'tp.dir':'Direction','tp.instrument':'Instrument','tp.entry':'Entry Window','tp.exit':'Exit Target',
+'tp.stop':'Stop Loss','tp.size':'Position Size','tp.note':'Note',
+'footer':'Powered by Alva — LightGBM prediction, OpenAlva data feeds & managed analytics',
+},
+zh:{
+'hdr.sub':'LightGBM 机器学习预测引擎 · 24个特征',
+'tab.pred':'今日预测','tab.feat':'特征监控','tab.back':'历史回测','tab.model':'模型健康',
+'s.pred':'盘前预测输出','s.predSub':'更新于美东09:25 · 模型 v3.2',
+'s.plan':'交易计划','s.feat':'24特征实时监控','s.featSub':'红色边框 = 异常 (偏离>2个标准差)',
+'s.back':'90天预测回溯','s.model':'模型性能仪表盘',
+'w.topFeat':'Top 5 特征贡献度','w.liveConf':'实时置信度 (9:00–9:30)','w.every5':'每5分钟更新',
+'w.daily':'每日预测结果','w.byScore':'按信号强度分层准确率','w.byDay':'按星期分层准确率',
+'w.cm':'混淆矩阵（测试集）','w.roc':'ROC 曲线','w.fimp':'全局特征重要性排名（Top 15）',
+'alert.flip':'方向翻转警报！置信度已反转。',
+'bt.correct':'正确','bt.wrong':'错误','bt.overall':'总体准确率','bt.high':'评分≥8 胜率',
+'bt.mid':'评分6-7 胜率','bt.low':'评分<6 胜率','bt.winStreak':'最长连胜','bt.lossStreak':'最长连败',
+'bt.total':'总预测数','bt.highImp':'高影响信号数',
+'cm.predUp':'预测涨','cm.predDn':'预测跌','cm.actUp':'实际涨','cm.actDn':'实际跌',
+'p.dir':'方向','p.conf':'置信度','p.score':'信号评分','p.rec':'建议操作',
+'p.bull':'看多','p.bear':'看空','p.strong':'强信号','p.medium':'中等信号','p.weak':'弱信号',
+'tp.dir':'方向','tp.instrument':'标的','tp.entry':'入场窗口','tp.exit':'止盈目标',
+'tp.stop':'止损','tp.size':'仓位大小','tp.note':'备注',
+'footer':'由 Alva 提供技术支持 — LightGBM 预测、OpenAlva 数据源与托管分析',
+}};
+let LANG='en';
+function t(k){return(I18N[LANG]&&I18N[LANG][k])||I18N.en[k]||k}
+function setLang(l){LANG=l;localStorage.setItem('spy_lang',l);document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('on',b.dataset.lang===l));document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});renderPrediction();renderFeatures();renderBacktest();renderModel();renderTradePlan()}
+
+/* ═══════════════════════ DEMO DATA ═══════════════════════ */
+const PRED={dir:1,conf:0.723,score:7,prob:0.723};
+
+const FEATURES=[
+{id:'es_ret',cat:'futures',name:{en:'ES Futures Return (7:00-9:30)',zh:'ES期货涨跌幅 (7:00-9:30)'},val:0.62,unit:'%',mean:0.04,std:0.45,contrib:15.2},
+{id:'es_vol',cat:'futures',name:{en:'ES Futures Volatility',zh:'ES期货波动率'},val:0.35,unit:'%',mean:0.28,std:0.12,contrib:4.8},
+{id:'es_volr',cat:'futures',name:{en:'ES Volume Ratio (vs 20D avg)',zh:'ES成交量倍数 (vs 20日均值)'},val:1.21,unit:'x',mean:1.0,std:0.3,contrib:3.1},
+{id:'nq_ret',cat:'futures',name:{en:'NQ Futures Return (7:00-9:30)',zh:'NQ期货涨跌幅 (7:00-9:30)'},val:0.85,unit:'%',mean:0.05,std:0.55,contrib:7.3},
+{id:'nq_vol',cat:'futures',name:{en:'NQ Futures Volatility',zh:'NQ期货波动率'},val:0.42,unit:'%',mean:0.35,std:0.15,contrib:2.9},
+{id:'nq_volr',cat:'futures',name:{en:'NQ Volume Ratio (vs 20D avg)',zh:'NQ成交量倍数 (vs 20日均值)'},val:1.38,unit:'x',mean:1.0,std:0.35,contrib:2.2},
+{id:'nk225',cat:'intl',name:{en:'Nikkei 225 Return',zh:'日经225涨跌幅'},val:1.12,unit:'%',mean:0.03,std:0.85,contrib:8.5},
+{id:'hsi',cat:'intl',name:{en:'Hang Seng Index Return',zh:'恒生指数涨跌幅'},val:-0.34,unit:'%',mean:-0.01,std:0.92,contrib:2.4},
+{id:'shcomp',cat:'intl',name:{en:'Shanghai Composite Return',zh:'上证综指涨跌幅'},val:0.18,unit:'%',mean:0.02,std:0.65,contrib:1.8},
+{id:'dax',cat:'intl',name:{en:'DAX Return (to 9:30 ET)',zh:'DAX涨跌幅 (至美东9:30)'},val:0.56,unit:'%',mean:0.02,std:0.72,contrib:3.6},
+{id:'ftse',cat:'intl',name:{en:'FTSE 100 Return',zh:'FTSE 100涨跌幅'},val:0.23,unit:'%',mean:0.01,std:0.58,contrib:1.5},
+{id:'vix_chg',cat:'vol',name:{en:'VIX Overnight Change',zh:'VIX隔夜变化'},val:-3.2,unit:'%',mean:0.1,std:2.5,contrib:11.8},
+{id:'vix_slope',cat:'vol',name:{en:'VIX Futures Curve Slope',zh:'VIX期货曲线斜率'},val:-0.45,unit:'',mean:0.15,std:0.4,contrib:4.2},
+{id:'spy_iv',cat:'vol',name:{en:'SPY Overnight IV Change',zh:'SPY隔夜隐含波动率变化'},val:-1.8,unit:'%',mean:0.05,std:1.2,contrib:5.6},
+{id:'pcr_dev',cat:'vol',name:{en:'SPY Put/Call Ratio Deviation (vs 20D MA)',zh:'SPY看跌/看涨比率偏离 (vs 20日均线)'},val:-0.12,unit:'',mean:0.0,std:0.08,contrib:3.8},
+{id:'news_sent',cat:'news',name:{en:'Overnight News Sentiment',zh:'隔夜新闻情绪分数'},val:0.35,unit:'',mean:0.02,std:0.25,contrib:6.1},
+{id:'news_cnt',cat:'news',name:{en:'Overnight Major News Count',zh:'隔夜重大新闻数量'},val:7,unit:'',mean:4.5,std:2.2,contrib:1.9},
+{id:'ust10_chg',cat:'rate',name:{en:'10Y Treasury Yield Change (bps)',zh:'10年期美债收益率变化 (基点)'},val:-2.1,unit:'bps',mean:0.3,std:3.5,contrib:5.1},
+{id:'spy_ma20',cat:'tech',name:{en:'SPY vs 20D MA Position',zh:'SPY相对20日均线位置'},val:1.8,unit:'%',mean:0.5,std:2.0,contrib:3.4},
+{id:'spy_rsi',cat:'tech',name:{en:'SPY RSI (14)',zh:'SPY RSI (14)'},val:58.3,unit:'',mean:52,std:10,contrib:2.7},
+{id:'spy_dd',cat:'tech',name:{en:'SPY Drawdown from ATH',zh:'SPY距历史高点回撤'},val:-2.4,unit:'%',mean:-3.5,std:3.0,contrib:2.1},
+{id:'dow',cat:'time',name:{en:'Day of Week (1=Mon, 5=Fri)',zh:'星期几 (1=周一, 5=周五)'},val:2,unit:'',mean:3,std:1.4,contrib:1.3},
+{id:'mperiod',cat:'time',name:{en:'Month Period (1=early,2=mid,3=late)',zh:'月份阶段 (1=上旬,2=中旬,3=下旬)'},val:2,unit:'',mean:2,std:0.8,contrib:0.8},
+{id:'earnings',cat:'time',name:{en:'Earnings Season Flag',zh:'财报季标志'},val:0,unit:'',mean:0.3,std:0.46,contrib:1.1}
+];
+
+const TOP5=FEATURES.slice().sort((a,b)=>b.contrib-a.contrib).slice(0,5);
+
+const LIVE_UPDATES=[
+{time:'09:00',conf:0.68,dir:1},{time:'09:05',conf:0.71,dir:1},{time:'09:10',conf:0.69,dir:1},
+{time:'09:15',conf:0.72,dir:1},{time:'09:20',conf:0.74,dir:1},{time:'09:25',conf:0.723,dir:1},{time:'09:30',conf:0.715,dir:1}
+];
+
+/* ── Backtest data (seeded) ── */
+function seededRand(s){return function(){s=(s*16807)%2147483647;return(s-1)/2147483646}}
+const rng=seededRand(42);
+const BT_DAYS=[];
+for(let i=0;i<90;i++){
+  const prob=0.5+rng()*0.35;
+  const dir=prob>0.5?1:0;
+  let score=3;
+  if(prob>=0.75)score=8+Math.floor(rng()*3);
+  else if(prob>=0.70)score=7;
+  else if(prob>=0.65)score=6;
+  else if(prob>=0.60)score=5;
+  else if(prob>=0.55)score=4;
+  score=Math.min(score,10);
+  const winP=score>=8?0.72:(score>=6?0.63:0.53);
+  const correct=rng()<winP;
+  const d=new Date(Date.now()-((90-i)*86400000));
+  BT_DAYS.push({date:d,dir,score,correct,prob});
+}
+
+/* ── Confusion matrix & ROC ── */
+const CM={tp:89,fp:35,fn:42,tn:84};
+const ROC_FPR=[0,0.02,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.7,0.8,0.9,1.0];
+const ROC_TPR=[0,0.12,0.28,0.42,0.52,0.6,0.66,0.71,0.76,0.8,0.86,0.9,0.94,0.97,0.99,1.0];
+
+const FEAT_IMP=[
+{name:'ES Futures Return',imp:0.142},{name:'VIX Overnight Chg',imp:0.118},{name:'Nikkei 225',imp:0.085},
+{name:'NQ Futures Return',imp:0.073},{name:'News Sentiment',imp:0.061},{name:'SPY IV Change',imp:0.056},
+{name:'10Y Yield Chg',imp:0.051},{name:'ES Volatility',imp:0.048},{name:'VIX Curve Slope',imp:0.042},
+{name:'Put/Call Deviation',imp:0.038},{name:'DAX Return',imp:0.036},{name:'SPY vs 20D MA',imp:0.034},
+{name:'ES Volume Ratio',imp:0.031},{name:'NQ Volatility',imp:0.029},{name:'SPY RSI(14)',imp:0.027}
+];
+
+/* ═══════════════════════ RENDERING ═══════════════════════ */
+const AX={axisLine:{show:false},axisTick:{show:false},axisLabel:{fontSize:10,color:'rgba(0,0,0,0.7)',fontFamily:"'Delight',-apple-system,BlinkMacSystemFont,sans-serif",margin:8},splitLine:{show:false}};
+function mkFmt(vf){vf=vf||((v)=>v);return(ps)=>{const ti=ps[0].axisValueLabel||ps[0].axisValue;let s='<div style="font-size:12px;color:rgba(0,0,0,0.7);margin-bottom:6px">'+ti+'</div>';ps.forEach(p=>{s+='<div style="display:flex;align-items:center;gap:6px;line-height:20px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+p.color+'"></span><span style="color:rgba(0,0,0,0.9)">'+p.seriesName+'</span><span style="color:rgba(0,0,0,0.9);margin-left:auto">'+vf(p.value,p)+'</span></div>'});return s}}
+const TT={trigger:'axis',backgroundColor:'rgba(255,255,255,0.96)',borderColor:'rgba(0,0,0,0.08)',borderWidth:1,borderRadius:6,padding:12,textStyle:{fontFamily:"'Delight',-apple-system,BlinkMacSystemFont,sans-serif",fontSize:12,fontWeight:400,color:'rgba(0,0,0,0.9)'},axisPointer:{type:'line',lineStyle:{color:'rgba(0,0,0,0.1)',width:1}},extraCssText:'box-shadow:none;',formatter:mkFmt()};
+
+function renderPrediction(){
+  const bull=PRED.dir===1;
+  const arrow=bull?'↑':'↓';const cls=bull?'bull':'bear';
+  const dirText=bull?t('p.bull'):t('p.bear');
+  const confPct=(PRED.conf*100).toFixed(1)+'%';
+  const sc=PRED.score;
+  const scCls=sc>=8?'high':(sc>=6?'mid':'low');
+  const scLabel=sc>=8?t('p.strong'):(sc>=6?t('p.medium'):t('p.weak'));
+  const rec=sc>=8?'5%':(sc>=6?'3%':(LANG==='zh'?'观望':'Hold'));
+  document.getElementById('predCard').innerHTML=`
+    <div class="pred-dir"><div class="pred-arrow" style="color:var(--main-m${bull?'3':'4'})">${arrow}</div><div class="pred-label ${cls}">${dirText}</div></div>
+    <div class="pred-conf"><div class="n" style="color:var(--main-m${bull?'3':'4'})">${confPct}</div><div class="l">${t('p.conf')}</div></div>
+    <div class="pred-score-wrap"><div class="pred-score-ring ${scCls}">${sc}</div><div style="font-size:12px;color:var(--text-n5)">${scLabel}</div></div>
+    <div class="pred-rec"><div class="pred-rec-title">${t('p.rec')}</div>
+      <div class="pred-rec-row"><span>${t('p.score')}</span><span class="v">${sc}/10</span></div>
+      <div class="pred-rec-row"><span>${LANG==='zh'?'建议仓位':'Position Size'}</span><span class="v">${rec}</span></div>
+      <div class="pred-rec-row"><span>${LANG==='zh'?'历史胜率':'Hist. Win Rate'}</span><span class="v">${sc>=8?'70%+':(sc>=6?'60-65%':'50-55%')}</span></div>
+      <div class="pred-rec-row"><span>${LANG==='zh'?'基础置信度分':'Base Score'}</span><span class="v">${sc>=8?8:(sc>=7?7:(sc>=6?6:sc))}</span></div>
+      <div class="pred-rec-row"><span>${LANG==='zh'?'一致性加分':'Consistency Bonus'}</span><span class="v">+${sc-(sc>=8?8:(sc>=7?7:(sc>=6?6:sc)))}</span></div>
+    </div>`;
+  renderTopFeatures();
+  renderLiveChart();
+}
+
+function renderTopFeatures(){
+  const maxC=Math.max(...TOP5.map(f=>f.contrib));
+  document.getElementById('topFeats').innerHTML=TOP5.map(f=>{
+    const name=f.name[LANG]||f.name.en;
+    const color=f.val>=0?'var(--main-m3)':'var(--main-m4)';
+    const valStr=(f.val>=0?'+':'')+f.val+f.unit;
+    return `<div class="feat-bar"><span class="name">${name}</span><span class="val" style="color:${color}">${valStr}</span><div class="bar-wrap"><div class="bar-fill" style="width:${(f.contrib/maxC*100).toFixed(0)}%;background:${color}"></div></div><span class="pct">+${f.contrib}%</span></div>`;
+  }).join('');
+}
+
+let liveChartInst;
+function renderLiveChart(){
+  if(!liveChartInst)liveChartInst=echarts.init(document.getElementById('liveChart'));
+  const opt={
+    grid:{top:20,right:12,bottom:24,left:12,containLabel:true},
+    xAxis:{type:'category',data:LIVE_UPDATES.map(u=>u.time),boundaryGap:false,...AX},
+    yAxis:{type:'value',min:0.5,max:0.85,...AX,splitLine:{lineStyle:{color:'rgba(0,0,0,0.04)'}},axisLabel:{...AX.axisLabel,formatter:v=>(v*100).toFixed(0)+'%'}},
+    tooltip:{...TT,formatter:mkFmt(v=>(v*100).toFixed(1)+'%')},
+    series:[{name:LANG==='zh'?'看多置信度':'Bull Confidence',type:'line',data:LIVE_UPDATES.map(u=>u.conf),smooth:0.2,lineStyle:{width:2,color:'#2a9b7d'},showSymbol:false,symbol:'circle',symbolSize:10,emphasis:{itemStyle:{borderColor:'#fff',borderWidth:1,color:'#2a9b7d'}},
+      areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(42,155,125,0.15)'},{offset:1,color:'rgba(42,155,125,0)'}])},
+      markLine:{silent:true,symbol:'none',data:[{yAxis:0.5,lineStyle:{color:'rgba(0,0,0,0.15)',type:[3,2],width:1},label:{show:true,formatter:'50%',fontSize:9,color:'rgba(0,0,0,0.3)',position:'insideEndTop'}}]}
+    }]
+  };
+  liveChartInst.setOption(opt,true);
+}
+
+function renderTradePlan(){
+  const bull=PRED.dir===1;
+  const sc=PRED.score;
+  const dirTxt=bull?t('p.bull'):t('p.bear');
+  const inst=bull?(LANG==='zh'?'买入 SPY Call 或做多 SPY/SPX':'Buy SPY Call or Long SPY/SPX'):(LANG==='zh'?'买入 SPY Put 或做空 SPY/SPX':'Buy SPY Put or Short SPY/SPX');
+  const size=sc>=8?'5%':(sc>=6?'3%':(LANG==='zh'?'观望 — 不建议入场':'Hold — No entry recommended'));
+  document.getElementById('tradePlan').innerHTML=[
+    [t('tp.dir'),`<span style="color:var(--main-m${bull?'3':'4'});font-weight:500">${dirTxt}</span> (${(PRED.conf*100).toFixed(1)}%)`],
+    [t('tp.instrument'),inst],
+    [t('tp.entry'),LANG==='zh'?'开盘后 9:30-9:35（避免前5分钟极端波动）':'9:30-9:35 ET (avoid first 5min extreme vol)'],
+    [t('tp.exit'),LANG==='zh'?'收盘前15分钟 15:45-16:00':'15:45-16:00 ET (15min before close)'],
+    [t('tp.stop'),LANG==='zh'?'开盘30分钟内走势相反且亏损 >2% 立即止损':'If adverse move >2% within 30min of open, cut loss immediately'],
+    [t('tp.size'),size],
+    [t('tp.note'),LANG==='zh'?'此为统计模型预测，非投资建议。过去表现不代表未来结果。':'Statistical model prediction, not investment advice. Past performance ≠ future results.']
+  ].map(([k,v])=>`<div class="tp-row"><span class="tp-k">${k}</span><span class="tp-v">${v}</span></div>`).join('');
+}
+
+function renderFeatures(){
+  document.getElementById('featGrid').innerHTML=FEATURES.map(f=>{
+    const name=f.name[LANG]||f.name.en;
+    const dev=(f.val-f.mean)/f.std;
+    const anom=Math.abs(dev)>2;
+    const devPct=Math.min(Math.abs(dev)/3*50,50);
+    const pos=dev>=0;
+    const valStr=typeof f.val==='number'?(f.val>=0&&f.unit!=='bps'&&f.unit!==''?'+':'')+f.val+f.unit:f.val;
+    return `<div class="feat-card${anom?' anomaly':''}">
+      ${anom?'<span class="fc-badge warn">ANOMALY</span>':''}
+      <div class="fc-name">${name}</div>
+      <div class="fc-val" style="color:${anom?'var(--main-m4)':'var(--text-n9)'}">${valStr}</div>
+      <div class="fc-dev"><div class="fc-dev-bar"><div class="fc-dev-fill ${pos?'pos':'neg'}" style="width:${devPct}%"></div></div><span>${dev>=0?'+':''}${dev.toFixed(2)}σ</span><span style="margin-left:auto;font-size:10px;color:var(--text-n3)">μ=${f.mean} σ=${f.std}</span></div>
+    </div>`;
+  }).join('');
+}
+
+let btScoreChart,btDayChart;
+function renderBacktest(){
+  const row=document.getElementById('btRow');
+  row.innerHTML=BT_DAYS.map((d,i)=>{
+    const cls=d.correct?'correct':'wrong';
+    const dt=d.date.toLocaleDateString('en',{month:'short',day:'numeric'});
+    return `<div class="bt-day ${cls}" title="${dt}: ${d.correct?'✓':'✗'} Score ${d.score}"></div>`;
+  }).join('');
+  const total=BT_DAYS.length;
+  const correctN=BT_DAYS.filter(d=>d.correct).length;
+  const highD=BT_DAYS.filter(d=>d.score>=8),midD=BT_DAYS.filter(d=>d.score>=6&&d.score<8),lowD=BT_DAYS.filter(d=>d.score<6);
+  document.getElementById('btAcc')=(correctN/total*100).toFixed(1)+'%';
+  document.getElementById('btAcc').textContent=(correctN/total*100).toFixed(1)+'%';
+  document.getElementById('btHigh').textContent=highD.length?(highD.filter(d=>d.correct).length/highD.length*100).toFixed(1)+'%':'N/A';
+  document.getElementById('btMid').textContent=midD.length?(midD.filter(d=>d.correct).length/midD.length*100).toFixed(1)+'%':'N/A';
+  document.getElementById('btLow').textContent=lowD.length?(lowD.filter(d=>d.correct).length/lowD.length*100).toFixed(1)+'%':'N/A';
+  let ws=0,ls=0,mw=0,ml=0,cw=0,cl=0;
+  BT_DAYS.forEach(d=>{if(d.correct){cw++;cl=0;if(cw>mw)mw=cw}else{cl++;cw=0;if(cl>ml)ml=cl}});
+  document.getElementById('btStreak').textContent=mw;
+  document.getElementById('btLoss').textContent=ml;
+  document.getElementById('btTotal').textContent=total;
+  document.getElementById('btHighImp').textContent=highD.length;
+  if(!btScoreChart)btScoreChart=echarts.init(document.getElementById('btScoreChart'));
+  const bins=[{l:'≥8',d:highD},{l:'6-7',d:midD},{l:'<6',d:lowD}];
+  btScoreChart.setOption({grid:{top:20,right:16,bottom:24,left:16,containLabel:true},xAxis:{type:'category',data:bins.map(b=>b.l),...AX},yAxis:{type:'value',max:100,...AX,axisLabel:{...AX.axisLabel,formatter:v=>v+'%'},splitLine:{lineStyle:{color:'rgba(0,0,0,0.04)'}}},tooltip:{...TT,formatter:mkFmt(v=>v.toFixed(1)+'%')},series:[{name:LANG==='zh'?'胜率':'Win Rate',type:'bar',data:bins.map(b=>b.d.length?(b.d.filter(d=>d.correct).length/b.d.length*100):0),barMaxWidth:40,itemStyle:{borderRadius:[4,4,0,0]},color:['#2a9b7d','#e6a91a','#e05357'],colorBy:'data'}]},true);
+  if(!btDayChart)btDayChart=echarts.init(document.getElementById('btDayChart'));
+  const days=['Mon','Tue','Wed','Thu','Fri'];
+  const dayData=days.map((_,i)=>{const dd=BT_DAYS.filter(d=>d.date.getDay()===i+1);return dd.length?(dd.filter(d=>d.correct).length/dd.length*100):0});
+  btDayChart.setOption({grid:{top:20,right:16,bottom:24,left:16,containLabel:true},xAxis:{type:'category',data:LANG==='zh'?['周一','周二','周三','周四','周五']:days,...AX},yAxis:{type:'value',max:100,...AX,axisLabel:{...AX.axisLabel,formatter:v=>v+'%'},splitLine:{lineStyle:{color:'rgba(0,0,0,0.04)'}}},tooltip:{...TT,formatter:mkFmt(v=>v.toFixed(1)+'%')},series:[{name:LANG==='zh'?'胜率':'Win Rate',type:'bar',data:dayData,barMaxWidth:40,itemStyle:{borderRadius:[4,4,0,0],color:'#3d8bd1'}}]},true);
+}
+
+let rocChart,fimpChart;
+function renderModel(){
+  document.getElementById('cmTP').textContent=CM.tp;
+  document.getElementById('cmFP').textContent=CM.fp;
+  document.getElementById('cmFN').textContent=CM.fn;
+  document.getElementById('cmTN').textContent=CM.tn;
+  if(!rocChart)rocChart=echarts.init(document.getElementById('rocChart'));
+  rocChart.setOption({grid:{top:16,right:16,bottom:24,left:16,containLabel:true},xAxis:{type:'value',min:0,max:1,...AX,name:'FPR',nameLocation:'center',nameGap:24,nameTextStyle:{fontSize:11,color:'rgba(0,0,0,0.5)'},splitLine:{lineStyle:{color:'rgba(0,0,0,0.04)'}}},yAxis:{type:'value',min:0,max:1,...AX,name:'TPR',nameLocation:'center',nameGap:32,nameTextStyle:{fontSize:11,color:'rgba(0,0,0,0.5)'},splitLine:{lineStyle:{color:'rgba(0,0,0,0.04)'}}},tooltip:{trigger:'item',backgroundColor:'rgba(255,255,255,0.96)',borderColor:'rgba(0,0,0,0.08)',textStyle:{fontFamily:AX.axisLabel.fontFamily,fontSize:12},formatter:p=>'FPR: '+p.data[0].toFixed(2)+'<br>TPR: '+p.data[1].toFixed(2)},series:[{name:'ROC',type:'line',data:ROC_FPR.map((f,i)=>[f,ROC_TPR[i]]),smooth:0.2,lineStyle:{width:2,color:'#49a3a6'},showSymbol:false,symbol:'circle',symbolSize:10,emphasis:{itemStyle:{borderColor:'#fff',borderWidth:1,color:'#49a3a6'}},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(73,163,166,0.12)'},{offset:1,color:'rgba(73,163,166,0)'}])}},{name:'Random',type:'line',data:[[0,0],[1,1]],lineStyle:{width:1,color:'rgba(0,0,0,0.15)',type:[4,3]},showSymbol:false,silent:true}]},true);
+  if(!fimpChart)fimpChart=echarts.init(document.getElementById('fimpChart'));
+  const fi=FEAT_IMP.slice().reverse();
+  fimpChart.setOption({grid:{top:8,right:40,bottom:8,left:8,containLabel:true},xAxis:{type:'value',...AX,splitLine:{lineStyle:{color:'rgba(0,0,0,0.04)'}},axisLabel:{...AX.axisLabel,formatter:v=>(v*100).toFixed(0)+'%'}},yAxis:{type:'category',data:fi.map(f=>f.name),...AX,axisLabel:{...AX.axisLabel,width:120,overflow:'truncate'}},tooltip:{...TT,formatter:mkFmt(v=>(v*100).toFixed(1)+'%')},series:[{name:'Importance',type:'bar',data:fi.map(f=>f.imp),barMaxWidth:16,itemStyle:{borderRadius:[0,4,4,0],color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#49a3a6'},{offset:1,color:'#2a9b7d'}])},label:{show:true,position:'right',fontSize:10,color:'rgba(0,0,0,0.5)',fontFamily:AX.axisLabel.fontFamily,formatter:p=>(p.value*100).toFixed(1)+'%'}}]},true);
+}
+
+/* ═══════════════════════ TAB SWITCH ═══════════════════════ */
+function switchTab(t){
+  document.querySelectorAll('.mod').forEach(el=>el.classList.remove('on'));
+  document.getElementById('m'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('on');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  setTimeout(()=>{
+    if(t==='pred'&&liveChartInst)liveChartInst.resize();
+    if(t==='back'){if(btScoreChart)btScoreChart.resize();if(btDayChart)btDayChart.resize()}
+    if(t==='model'){if(rocChart)rocChart.resize();if(fimpChart)fimpChart.resize()}
+  },50);
+}
+
+/* ═══════════════════════ INIT ═══════════════════════ */
+function init(){
+  const d=new Date();
+  document.getElementById('hdrDate').textContent=d.toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  const saved=localStorage.getItem('spy_lang');if(saved)setLang(saved);
+  renderPrediction();renderTradePlan();renderFeatures();renderBacktest();renderModel();
+  window.addEventListener('resize',()=>{[liveChartInst,btScoreChart,btDayChart,rocChart,fimpChart].forEach(c=>{if(c)c.resize()})});
+}
+init();
+</script>
+</body>
+</html>
