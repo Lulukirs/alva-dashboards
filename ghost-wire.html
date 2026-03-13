@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ghost Wire — Geopolitical Alpha Radar</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+@font-face{font-family:'Delight';src:url('Delight-Regular.ttf') format('truetype');font-weight:400;font-style:normal}
+@font-face{font-family:'Delight';src:url('Delight-Medium.ttf') format('truetype');font-weight:500;font-style:normal}
+:root{
+  --bg0:#080c16;--bg1:#0e1320;--bg2:#151b2e;--bg3:#1c2340;--bg4:#232b4a;
+  --tx9:rgba(255,255,255,0.92);--tx7:rgba(255,255,255,0.7);--tx5:rgba(255,255,255,0.48);--tx3:rgba(255,255,255,0.3);--tx2:rgba(255,255,255,0.15);
+  --alva:#49a3a6;--alva10:rgba(73,163,166,0.12);--bull:#2a9b7d;--bear:#e05357;--alert:#e6a91a;--emph:#ff9800;
+  --mil:#ff4757;--sup:#ff9800;--pol:#e6a91a;--dis:#4da6ff;
+  --line:rgba(255,255,255,0.07);--line2:rgba(255,255,255,0.12);
+  --sp-xs:8px;--sp-s:12px;--sp-m:16px;--sp-l:20px;--sp-xl:24px;--sp-xxl:32px;
+  --r-s:4px;--r-m:6px;--r-l:8px;
+  --font:'Delight',-apple-system,BlinkMacSystemFont,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg0);color:var(--tx9);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;overflow-x:hidden}
+.dashboard{display:flex;flex-direction:column;height:100vh;min-height:600px}
+/* ── Header ── */
+.dash-hdr{display:flex;align-items:center;gap:var(--sp-m);padding:var(--sp-s) var(--sp-xl);background:var(--bg1);border-bottom:1px solid var(--line);flex-shrink:0;z-index:100}
+.hdr-logo{display:flex;align-items:center;gap:var(--sp-xs)}
+.hdr-logo svg{flex-shrink:0}
+.hdr-title{font-size:17px;font-weight:500;letter-spacing:0.3px;white-space:nowrap}
+.hdr-title .ghost{color:var(--alva)}
+.hdr-sep{width:1px;height:20px;background:var(--line2);margin:0 var(--sp-xs)}
+.hdr-risk{display:flex;align-items:center;gap:var(--sp-xs);font-size:12px;color:var(--tx5)}
+.risk-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase}
+.risk-low{background:rgba(42,155,125,0.15);color:#2a9b7d}
+.risk-medium{background:rgba(230,169,26,0.15);color:#e6a91a}
+.risk-high{background:rgba(255,152,0,0.15);color:#ff9800}
+.risk-extreme{background:rgba(255,71,87,0.2);color:#ff4757}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:var(--sp-s)}
+.lang-tog{display:flex;gap:2px;background:var(--bg3);border-radius:var(--r-s);padding:2px}
+.lang-btn{background:none;border:none;color:var(--tx5);font-size:11px;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:var(--font)}
+.lang-btn.on{background:var(--alva);color:#fff}
+.hdr-stat{text-align:center;min-width:60px}
+.hdr-stat .lbl{font-size:10px;color:var(--tx5);letter-spacing:0.5px;text-transform:uppercase}
+.hdr-stat .val{font-size:16px;font-weight:500;color:var(--tx9);font-family:var(--mono)}
+/* ── Nav ── */
+.dash-nav{display:flex;gap:0;background:var(--bg1);border-bottom:1px solid var(--line);padding:0 var(--sp-xl);flex-shrink:0}
+.nav-tab{background:none;border:none;color:var(--tx5);font-size:13px;font-family:var(--font);padding:10px var(--sp-m);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.nav-tab:hover{color:var(--tx7)}
+.nav-tab.on{color:var(--alva);border-bottom-color:var(--alva)}
+/* ── Main ── */
+.dash-main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.view{display:none;flex:1;overflow:hidden}
+.view.on{display:flex}
+/* ── Radar View (A+B) ── */
+#vRadar{flex-direction:row}
+#map{flex:1;min-width:0;z-index:1}
+.feed-panel{width:380px;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg1);border-left:1px solid var(--line);overflow:hidden}
+.feed-hdr{padding:var(--sp-s) var(--sp-m);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:var(--sp-xs);flex-shrink:0}
+.feed-hdr-title{font-size:13px;font-weight:500;color:var(--tx7)}
+.feed-filters{display:flex;gap:6px;padding:var(--sp-xs) var(--sp-m);border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:wrap}
+.feed-filters select{background:var(--bg3);color:var(--tx7);border:1px solid var(--line2);border-radius:var(--r-s);padding:3px 8px;font-size:11px;font-family:var(--font);cursor:pointer}
+.feed-filters select:focus{outline:1px solid var(--alva)}
+.feed-list{flex:1;overflow-y:auto;padding:var(--sp-xs) 0}
+.feed-list::-webkit-scrollbar{width:4px}
+.feed-list::-webkit-scrollbar-thumb{background:var(--tx2);border-radius:2px}
+/* ── Event Card ── */
+.ev-card{padding:var(--sp-s) var(--sp-m);position:relative;cursor:pointer;transition:background .15s}
+.ev-card:hover{background:var(--bg2)}
+.ev-card+.ev-card{border-top:1px solid var(--line)}
+.ev-card.hot{border-left:3px solid var(--mil)}
+.ev-card.hot .ev-score{background:var(--mil);color:#fff}
+.ev-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.ev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ev-dot.military{background:var(--mil)}.ev-dot.supply{background:var(--sup)}.ev-dot.policy{background:var(--pol)}.ev-dot.disaster{background:var(--dis)}
+.ev-time{font-size:10px;color:var(--tx5);font-family:var(--mono)}
+.ev-src{font-size:10px;color:var(--tx3);margin-left:auto}
+.ev-stars{color:var(--alert);font-size:9px;letter-spacing:1px}
+.ev-title{font-size:13px;font-weight:500;color:var(--tx9);line-height:1.4;margin-bottom:3px}
+.ev-summary{font-size:11px;color:var(--tx5);line-height:1.4;margin-bottom:6px}
+.ev-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ev-asset{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:500;background:var(--bg4);color:var(--tx7)}
+.ev-score{display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:500;background:var(--alva10);color:var(--alva)}
+.ev-dir{font-size:11px;font-weight:500;margin-left:auto}
+.ev-dir.bull{color:var(--bull)}.ev-dir.bear{color:var(--bear)}
+/* ── Latency Bar (C) ── */
+.latency-bar{flex-shrink:0;background:var(--bg1);border-top:1px solid var(--line);padding:var(--sp-s) var(--sp-xl);display:flex;align-items:center;gap:var(--sp-xl);overflow-x:auto}
+.lat-detect{display:flex;align-items:center;gap:var(--sp-xs);font-size:12px;flex-shrink:0}
+.lat-detect .icon{font-size:16px}.lat-detect .tm{font-family:var(--mono);color:var(--alva);font-weight:500}
+.lat-detect .arrow{color:var(--tx3);margin:0 4px}
+.lat-detect .bbn{color:var(--tx5)}
+.lat-lead{padding:2px 10px;border-radius:10px;font-size:12px;font-weight:500;background:rgba(42,155,125,0.15);color:var(--bull);font-family:var(--mono);white-space:nowrap}
+.lat-race{flex:1;min-width:200px;display:flex;flex-direction:column;gap:4px}
+.race-row{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--tx5)}
+.race-row .lbl{width:64px;flex-shrink:0;text-align:right}
+.race-bar{flex:1;height:4px;border-radius:2px;background:var(--bg3);overflow:hidden;position:relative}
+.race-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.race-fill.gw{background:var(--alva)}.race-fill.bb{background:var(--tx3)}.race-fill.rt{background:var(--tx2)}
+.lat-stats{display:flex;gap:var(--sp-l);flex-shrink:0}
+.lat-stat{text-align:center}
+.lat-stat .n{font-size:14px;font-family:var(--mono);font-weight:500;color:var(--tx9)}
+.lat-stat .l{font-size:10px;color:var(--tx5);text-transform:uppercase;letter-spacing:0.3px}
+/* ── Replay View (D) ── */
+#vReplay{flex-direction:column;overflow-y:auto;padding:var(--sp-xl)}
+.replay-top{display:flex;gap:var(--sp-m);margin-bottom:var(--sp-xl);flex-wrap:wrap}
+.scenario-card{flex:1;min-width:200px;padding:var(--sp-m);background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-m);cursor:pointer;transition:all .2s}
+.scenario-card:hover{border-color:var(--alva);background:var(--bg3)}
+.scenario-card.on{border-color:var(--alva);background:var(--alva10)}
+.sc-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.sc-sub{font-size:11px;color:var(--tx5);line-height:1.4}
+.sc-gain{font-size:13px;font-weight:500;color:var(--bull);margin-top:6px}
+.replay-body{display:grid;grid-template-columns:1fr 300px;gap:var(--sp-xl);align-items:start}
+.replay-chart-wrap{background:var(--bg2);border-radius:var(--r-m);padding:var(--sp-m);position:relative;min-height:360px}
+.replay-chart-title{font-size:13px;color:var(--tx7);margin-bottom:var(--sp-s)}
+#replayChart{width:100%;height:340px}
+.replay-info{display:flex;flex-direction:column;gap:var(--sp-m)}
+.ri-box{background:var(--bg2);border-radius:var(--r-m);padding:var(--sp-m)}
+.ri-label{font-size:11px;color:var(--tx5);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:6px}
+.ri-val{font-size:22px;font-weight:400;font-family:var(--mono)}
+.ri-val.pos{color:var(--bull)}.ri-val.neg{color:var(--bear)}
+.ri-detail{font-size:11px;color:var(--tx5);margin-top:4px;line-height:1.5}
+.replay-timeline{margin-top:var(--sp-m)}
+.tl-item{display:flex;gap:var(--sp-xs);padding:6px 0;border-left:2px solid var(--line2);margin-left:6px;padding-left:var(--sp-s)}
+.tl-item .tl-time{font-size:10px;color:var(--tx5);font-family:var(--mono);min-width:44px;flex-shrink:0}
+.tl-item .tl-text{font-size:11px;color:var(--tx7);line-height:1.4}
+.tl-item.signal{border-left-color:var(--alva)}
+.tl-item.peak{border-left-color:var(--bull)}
+/* ── Heatmap View (E) ── */
+#vHeatmap{flex-direction:column;padding:var(--sp-xl);overflow-y:auto}
+.hm-title{font-size:16px;font-weight:500;margin-bottom:4px}
+.hm-sub{font-size:12px;color:var(--tx5);margin-bottom:var(--sp-xl)}
+#heatmapChart{width:100%;height:420px;background:var(--bg2);border-radius:var(--r-m);padding:var(--sp-m)}
+.hm-legend{display:flex;align-items:center;justify-content:center;gap:var(--sp-xs);margin-top:var(--sp-m);font-size:11px;color:var(--tx5)}
+.hm-grad{width:200px;height:8px;border-radius:4px;background:linear-gradient(to right,#e05357,#3a2020,#0e1320,#1a3a2a,#2a9b7d)}
+/* ── Pulse Markers ── */
+.pulse-marker{width:12px;height:12px;border-radius:50%;position:relative;cursor:pointer}
+.pulse-marker::before,.pulse-marker::after{content:'';position:absolute;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%)}
+.pulse-marker::before{width:20px;height:20px;background:inherit;opacity:0.3;animation:pulse 2s ease-out infinite}
+.pulse-marker::after{width:30px;height:30px;border:1px solid;border-color:inherit;opacity:0;animation:ripple 2s ease-out infinite}
+@keyframes pulse{0%{transform:translate(-50%,-50%) scale(1);opacity:0.3}100%{transform:translate(-50%,-50%) scale(2);opacity:0}}
+@keyframes ripple{0%{transform:translate(-50%,-50%) scale(0.6);opacity:0.4}100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}}
+.pulse-marker.military{background:var(--mil);border-color:var(--mil)}
+.pulse-marker.supply{background:var(--sup);border-color:var(--sup)}
+.pulse-marker.policy{background:var(--pol);border-color:var(--pol)}
+.pulse-marker.disaster{background:var(--dis);border-color:var(--dis)}
+/* ── Radar sweep ── */
+.radar-sweep{position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent 0%,rgba(73,163,166,0.4) 50%,transparent 100%);z-index:500;pointer-events:none;animation:sweep 6s linear infinite}
+@keyframes sweep{0%{top:0}100%{top:100%}}
+/* ── Map overlays ── */
+.map-risk-gauge{position:absolute;top:12px;right:12px;z-index:800;background:rgba(14,19,32,0.9);border:1px solid var(--line2);border-radius:var(--r-m);padding:var(--sp-s);backdrop-filter:blur(8px)}
+.gauge-title{font-size:10px;color:var(--tx5);text-transform:uppercase;letter-spacing:0.5px;text-align:center;margin-bottom:6px}
+.gauge-bar{width:8px;height:80px;background:var(--bg3);border-radius:4px;margin:0 auto;position:relative;overflow:hidden}
+.gauge-fill{position:absolute;bottom:0;left:0;right:0;border-radius:4px;transition:height .8s,background .8s}
+.gauge-level{font-size:11px;font-weight:500;text-align:center;margin-top:6px}
+.map-legend{position:absolute;bottom:12px;left:12px;z-index:800;background:rgba(14,19,32,0.85);border:1px solid var(--line2);border-radius:var(--r-m);padding:var(--sp-xs) var(--sp-s);backdrop-filter:blur(8px);display:flex;gap:var(--sp-s)}
+.ml-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tx5)}
+.ml-dot{width:6px;height:6px;border-radius:50%}
+/* ── Footer ── */
+.dash-foot{display:flex;align-items:center;justify-content:center;gap:6px;padding:6px;background:var(--bg1);border-top:1px solid var(--line);font-size:10px;color:var(--tx3);flex-shrink:0}
+/* ── Alva watermark (dark ver) ── */
+.alva-wm{position:absolute;bottom:var(--sp-m);left:var(--sp-m);opacity:0.12;line-height:0}
+/* ── Leaflet overrides ── */
+.leaflet-container{background:var(--bg0)!important;font-family:var(--font)!important}
+.leaflet-control-zoom a{background:var(--bg2)!important;color:var(--tx7)!important;border-color:var(--line2)!important}
+.leaflet-popup-content-wrapper{background:var(--bg2)!important;color:var(--tx9)!important;border-radius:var(--r-m)!important;box-shadow:0 8px 30px rgba(0,0,0,0.4)!important}
+.leaflet-popup-tip{background:var(--bg2)!important}
+.leaflet-popup-content{margin:var(--sp-s)!important;font-size:12px!important;line-height:1.5!important}
+.leaflet-popup-close-button{color:var(--tx5)!important}
+/* ── Responsive ── */
+@media(max-width:900px){
+  .feed-panel{width:280px}
+  .replay-body{grid-template-columns:1fr}
+  .lat-race{display:none}
+}
+@media(max-width:640px){
+  #vRadar{flex-direction:column}
+  .feed-panel{width:100%;max-height:40vh;border-left:none;border-top:1px solid var(--line)}
+  .dash-hdr{flex-wrap:wrap;gap:var(--sp-xs)}
+  .latency-bar{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <header class="dash-hdr">
+    <div class="hdr-logo">
+      <svg width="22" height="22" viewBox="0 0 50 50" fill="none"><path d="M34.47 0.4C38.14-0.13 41.86-0.13 45.53 0.4c.29.04.59.09 1.18.18.2.03.3.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.3-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0c-10.87 0-19.72 8.68-19.99 19.48L20 40c0 1.85-.13 3.7-.4 5.53-.04.29-.09.59-.18 1.18-.03.2-.05.3-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18C11.86 50.13 8.14 50.13 4.47 49.6c-.29-.04-.59-.09-1.18-.18-.2-.03-.3-.05-.38-.07C1.78 49.1.9 48.22.65 47.09.63 47.01.61 46.91.58 46.71.49 46.12.44 45.83.4 45.53c-.53-3.67-.53-7.39 0-11.06.04-.29.09-.59.18-1.18.03-.2.05-.3.07-.38.25-1.13 1.13-2.01 2.26-2.26.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18C6.3 30.13 8.15 30 10 30v0c11-0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53.04-.29.09-.59.18-1.18.03-.2.05-.3.07-.38C30.9 1.78 31.78.9 32.91.65c.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18Z" fill="#49A3A6"/><path d="M45.53 30.4c-3.67-.53-7.39-.53-11.06 0-.29.04-.59.09-1.18.18-.2.03-.3.05-.38.07-1.13.25-2.01 1.13-2.26 2.26-.02.09-.04.19-.07.38-.09.59-.14.88-.18 1.18-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.3.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.3-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.03-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.3-.07-.38-.25-1.13-1.13-2.01-2.26-2.26-.09-.02-.19-.04-.38-.07-.59-.09-.88-.14-1.18-.18ZM15.53.4C11.86-.13 8.14-.13 4.47.4c-.29.04-.59.09-1.18.18-.2.03-.3.05-.38.07C1.78.9.9 1.78.65 2.91.63 3 .61 3.09.58 3.29.49 3.88.44 4.18.4 4.47c-.53 3.67-.53 7.39 0 11.06.04.29.09.59.18 1.18.03.2.05.3.07.38.25 1.13 1.13 2.01 2.26 2.26.09.02.19.04.38.07.59.09.88.14 1.18.18 3.67.53 7.39.53 11.06 0 .29-.04.59-.09 1.18-.18.2-.03.3-.05.38-.07 1.13-.25 2.01-1.13 2.26-2.26.02-.09.04-.19.07-.38.09-.59.14-.88.18-1.18.53-3.67.53-7.39 0-11.06-.04-.29-.09-.59-.18-1.18-.03-.2-.05-.3-.07-.38C19.1.9 18.22.9 17.09.65c-.09-.02-.19-.03-.38-.07-.59-.09-.88-.14-1.18-.18Z" fill="rgba(255,255,255,0.9)"/></svg>
+    </div>
+    <h1 class="hdr-title"><span class="ghost">Ghost Wire</span><span style="color:var(--tx3)"> :</span> <span data-i18n="hdr.sub">Geopolitical Alpha Radar</span></h1>
+    <div class="hdr-sep"></div>
+    <div class="hdr-risk"><span data-i18n="hdr.risk">Global Risk</span> <span class="risk-badge risk-medium" id="riskBadge">MEDIUM</span></div>
+    <div class="hdr-right">
+      <div class="hdr-stat"><div class="lbl" data-i18n="hdr.today">TODAY</div><div class="val" id="statTotal">0</div></div>
+      <div class="hdr-stat"><div class="lbl" data-i18n="hdr.highImp">HIGH IMPACT</div><div class="val" id="statHigh" style="color:var(--mil)">0</div></div>
+      <div class="hdr-sep"></div>
+      <div class="lang-tog"><button class="lang-btn on" data-lang="en" onclick="setLang('en')">EN</button><button class="lang-btn" data-lang="zh" onclick="setLang('zh')">中文</button></div>
+    </div>
+  </header>
+
+  <nav class="dash-nav">
+    <button class="nav-tab on" data-v="radar" onclick="switchView('radar')">⚡ <span data-i18n="nav.radar">Event Radar</span></button>
+    <button class="nav-tab" data-v="replay" onclick="switchView('replay')">⏪ <span data-i18n="nav.replay">Historical Replay</span></button>
+    <button class="nav-tab" data-v="heatmap" onclick="switchView('heatmap')">🔥 <span data-i18n="nav.heatmap">Correlation Heatmap</span></button>
+  </nav>
+
+  <div class="dash-main">
+    <!-- ═══ RADAR VIEW ═══ -->
+    <div class="view on" id="vRadar">
+      <div id="map">
+        <div class="radar-sweep"></div>
+        <div class="map-risk-gauge" id="riskGauge">
+          <div class="gauge-title" data-i18n="gauge.title">THREAT LEVEL</div>
+          <div class="gauge-bar"><div class="gauge-fill" id="gaugeFill" style="height:40%;background:var(--alert)"></div></div>
+          <div class="gauge-level" id="gaugeLevel" style="color:var(--alert)">MEDIUM</div>
+        </div>
+        <div class="map-legend">
+          <div class="ml-item"><div class="ml-dot" style="background:var(--mil)"></div><span data-i18n="leg.mil">Military</span></div>
+          <div class="ml-item"><div class="ml-dot" style="background:var(--sup)"></div><span data-i18n="leg.sup">Supply Chain</span></div>
+          <div class="ml-item"><div class="ml-dot" style="background:var(--pol)"></div><span data-i18n="leg.pol">Policy</span></div>
+          <div class="ml-item"><div class="ml-dot" style="background:var(--dis)"></div><span data-i18n="leg.dis">Disaster</span></div>
+        </div>
+      </div>
+      <div class="feed-panel">
+        <div class="feed-hdr">
+          <span class="feed-hdr-title" data-i18n="feed.title">Event Intelligence Feed</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="feedCount"></span>
+        </div>
+        <div class="feed-filters">
+          <select id="fAsset" onchange="renderFeed()"><option value="all" data-i18n="f.allAssets">All Assets</option></select>
+          <select id="fRegion" onchange="renderFeed()"><option value="all" data-i18n="f.allRegions">All Regions</option></select>
+          <select id="fScore" onchange="renderFeed()"><option value="0">Score ≥ 0</option><option value="5">≥ 5</option><option value="7">≥ 7</option><option value="9">≥ 9</option></select>
+        </div>
+        <div class="feed-list" id="feedList"></div>
+      </div>
+    </div>
+
+    <!-- ═══ REPLAY VIEW ═══ -->
+    <div class="view" id="vReplay">
+      <div class="replay-top" id="scenarioList"></div>
+      <div class="replay-body">
+        <div class="replay-chart-wrap">
+          <div class="replay-chart-title" id="replayTitle" data-i18n="replay.select">Select a scenario above</div>
+          <div id="replayChart"></div>
+          <div class="alva-wm"><svg width="56" height="14" viewBox="0 0 203 52" fill="none"><path d="M184 10.4c2.9 0 5.5.38 7.8 1.14 2.3.76 4.2 1.85 5.8 3.29 1.6 1.43 2.8 3.19 3.7 5.26.8 2.07 1.3 4.42 1.3 7.04V50h-8.8V39.9c-.5 1.72-1.1 3.28-2.1 4.66-.9 1.38-2 2.55-3.3 3.52-1.3.96-2.8 1.69-4.5 2.2-1.7.51-3.5.77-5.4.77-2 0-3.9-.28-5.6-.84-1.7-.55-3.1-1.32-4.3-2.33-1.2-1-2.1-2.21-2.8-3.62-.6-1.42-.9-3-.9-4.76 0-1.8.4-3.4 1.1-4.82.7-1.42 1.7-2.63 3-3.62 1.3-.99 3-1.75 4.9-2.27 1.9-.54 4.1-.8 6.5-.8H194v-.89c0-1.46-.2-2.77-.7-3.92-.5-1.17-1.1-2.16-2-2.97-.8-.82-1.8-1.44-3.1-1.87-1.2-.43-2.6-.65-4.1-.65-1.6 0-2.9.18-4.1.54-1.1.35-2.1.85-2.8 1.5-.7.66-1.3 1.44-1.6 2.36-.4.92-.6 1.95-.6 3.09h-8.8c0-2.27.4-4.32 1.3-6.15.8-1.83 2-3.39 3.5-4.67 1.6-1.29 3.5-2.29 5.7-2.97 2.2-.69 4.7-1.03 7.5-1.03ZM109 50H99l-4-11.8H73.6L69.6 50H60l18-50h13.2L109 50Zm12.2 0h-8.8V0h8.8v50Zm23.6-5.5L155.5 11.5h9l-13.4 38.5h-12.8L125 11.5h9.2l10.6 33Zm19-9.3c-2.4 0-4.2.4-5.4 1.2-1.2.8-1.8 2-1.8 3.6 0 1.65.7 2.92 2 3.8 1.4.87 3.3 1.31 5.9 1.31 1.8 0 3.4-.22 4.9-.65 1.5-.44 2.8-1.06 3.9-1.84 1.1-.78 2-1.7 2.6-2.77.6-1.08.9-2.26.9-3.53v-1.1h-12.9ZM76.2 30.4h16.3l-8.1-24.2-8.2 24.2Z" fill="rgba(255,255,255,0.5)"/></svg></div>
+        </div>
+        <div class="replay-info" id="replayInfo">
+          <div class="ri-box"><div class="ri-label" data-i18n="ri.gain">Theoretical Gain</div><div class="ri-val pos" id="riGain">—</div><div class="ri-detail" id="riGainDetail"></div></div>
+          <div class="ri-box"><div class="ri-label" data-i18n="ri.lead">Detection Lead</div><div class="ri-val" id="riLead" style="color:var(--alva)">—</div></div>
+          <div class="ri-box"><div class="ri-label" data-i18n="ri.timeline">Event Timeline</div><div class="replay-timeline" id="riTimeline"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ HEATMAP VIEW ═══ -->
+    <div class="view" id="vHeatmap">
+      <div class="hm-title" data-i18n="hm.title">Geopolitical Event ↔ Asset Correlation Matrix</div>
+      <div class="hm-sub" data-i18n="hm.sub">Historical average price reaction by event type and asset class. Based on analysis of 340+ events since 2020.</div>
+      <div id="heatmapChart"></div>
+      <div class="hm-legend"><span data-i18n="hm.bearish">Bearish</span><div class="hm-grad"></div><span data-i18n="hm.bullish">Bullish</span></div>
+    </div>
+
+    <!-- ═══ Latency Bar (always visible) ═══ -->
+    <div class="latency-bar" id="latBar">
+      <div class="lat-detect">
+        <span class="icon">⚡</span>
+        <span>Ghost Wire</span>
+        <span class="tm" id="latGW">—</span>
+        <span class="arrow">→</span>
+        <span class="bbn">Bloomberg</span>
+        <span class="tm" id="latBB" style="color:var(--tx5)">—</span>
+      </div>
+      <div class="lat-lead" id="latLead">—</div>
+      <div class="lat-race">
+        <div class="race-row"><span class="lbl">Ghost Wire</span><div class="race-bar"><div class="race-fill gw" id="raceGW" style="width:95%"></div></div></div>
+        <div class="race-row"><span class="lbl">Bloomberg</span><div class="race-bar"><div class="race-fill bb" id="raceBB" style="width:60%"></div></div></div>
+        <div class="race-row"><span class="lbl">Reuters</span><div class="race-bar"><div class="race-fill rt" id="raceRT" style="width:52%"></div></div></div>
+      </div>
+      <div class="lat-stats">
+        <div class="lat-stat"><div class="n" id="latAvg">14m 32s</div><div class="l" data-i18n="lat.avg">Avg Lead</div></div>
+        <div class="lat-stat"><div class="n" id="latMax">47m 08s</div><div class="l" data-i18n="lat.max">Max Lead</div></div>
+        <div class="lat-stat"><div class="n" id="latCnt">342</div><div class="l" data-i18n="lat.events">Events</div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="dash-foot">
+    <svg width="14" height="14" viewBox="0 0 50 50" fill="none"><path d="M34.47.4C38.14-.13 41.86-.13 45.53.4c.29.04.59.09 1.18.18.2.03.3.05.38.07 1.13.25 2.01 1.13 2.26 2.26.02.09.03.19.07.38.09.59.14.88.18 1.18.53 3.67.53 7.39 0 11.06-.04.29-.09.59-.18 1.18-.03.2-.05.3-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18-1.83.26-3.68.4-5.53.4v0C29.13 20 20.28 28.68 20.01 39.48L20 40c0 1.85-.13 3.7-.4 5.53-.04.29-.09.59-.18 1.18-.03.2-.05.3-.07.38-.25 1.13-1.13 2.01-2.26 2.26-.09.02-.19.03-.38.07-.59.09-.88.14-1.18.18C11.86 50.13 8.14 50.13 4.47 49.6c-.29-.04-.59-.09-1.18-.18-.2-.03-.3-.05-.38-.07C1.78 49.1.9 48.22.65 47.09.63 47.01.61 46.91.58 46.71.49 46.12.44 45.83.4 45.53c-.53-3.67-.53-7.39 0-11.06.04-.29.09-.59.18-1.18.03-.2.05-.3.07-.38.25-1.13 1.13-2.01 2.26-2.26.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18C6.3 30.13 8.15 30 10 30v0c11 0 19.92-8.88 20-19.86L30 10c0-1.85.13-3.7.4-5.53.04-.29.09-.59.18-1.18.03-.2.05-.3.07-.38C30.9 1.78 31.78.9 32.91.65c.09-.02.19-.03.38-.07.59-.09.88-.14 1.18-.18Z" fill="#49A3A6"/></svg>
+    <span data-i18n="footer">Powered by Alva — OSINT intelligence, NLP scoring & geopolitical risk analytics</span>
+  </footer>
+</div>
+
+<script>
+/* ═══════════════════════ I18N ═══════════════════════ */
+const I18N={
+en:{
+'hdr.sub':'Geopolitical Alpha Radar','hdr.risk':'Global Risk','hdr.today':'TODAY','hdr.highImp':'HIGH IMPACT',
+'nav.radar':'Event Radar','nav.replay':'Historical Replay','nav.heatmap':'Correlation Heatmap',
+'gauge.title':'THREAT LEVEL',
+'leg.mil':'Military','leg.sup':'Supply Chain','leg.pol':'Policy','leg.dis':'Disaster',
+'feed.title':'Event Intelligence Feed',
+'f.allAssets':'All Assets','f.allRegions':'All Regions',
+'replay.select':'Select a scenario above to begin replay',
+'ri.gain':'Theoretical Gain','ri.lead':'Detection Lead','ri.timeline':'Event Timeline',
+'hm.title':'Geopolitical Event ↔ Asset Correlation Matrix',
+'hm.sub':'Historical average price reaction (%) by event type and asset class. Based on analysis of 340+ events since 2020.',
+'hm.bearish':'Bearish','hm.bullish':'Bullish',
+'lat.avg':'Avg Lead','lat.max':'Max Lead','lat.events':'Events',
+'footer':'Powered by Alva — OSINT intelligence, NLP scoring & geopolitical risk analytics',
+'dir.bull':'Bullish','dir.bear':'Bearish',
+'popup.score':'Impact Score','popup.assets':'Affected Assets','popup.dir':'Direction','popup.conf':'Confidence',
+'sc.entry':'If entered at signal','sc.peak':'Peak reaction',
+'tl.detected':'Ghost Wire detected','tl.bb':'Bloomberg reported','tl.peak':'Market peak reaction',
+'region.middle_east':'Middle East','region.europe':'Europe','region.asia':'Asia Pacific','region.americas':'Americas','region.africa':'Africa',
+},
+zh:{
+'hdr.sub':'地缘政治 Alpha 雷达','hdr.risk':'全球风险','hdr.today':'今日信号','hdr.highImp':'高影响',
+'nav.radar':'事件雷达','nav.replay':'历史回放','nav.heatmap':'关联热力图',
+'gauge.title':'威胁等级',
+'leg.mil':'军事冲突','leg.sup':'供应链','leg.pol':'政策监管','leg.dis':'自然灾害',
+'feed.title':'事件情报流',
+'f.allAssets':'所有资产','f.allRegions':'所有区域',
+'replay.select':'选择上方场景开始回放',
+'ri.gain':'理论收益','ri.lead':'检测领先时间','ri.timeline':'事件时间线',
+'hm.title':'地缘政治事件 ↔ 资产关联矩阵',
+'hm.sub':'按事件类型和资产类别的历史平均价格反应（%）。基于2020年以来340+事件分析。',
+'hm.bearish':'看跌','hm.bullish':'看涨',
+'lat.avg':'平均领先','lat.max':'最大领先','lat.events':'事件数',
+'footer':'由 Alva 提供技术支持 — OSINT 情报、NLP 评分与地缘风险分析',
+'dir.bull':'看涨','dir.bear':'看跌',
+'popup.score':'影响力评分','popup.assets':'受影响资产','popup.dir':'方向','popup.conf':'置信度',
+'sc.entry':'若在信号时入场','sc.peak':'峰值反应',
+'tl.detected':'Ghost Wire 检测','tl.bb':'Bloomberg 报道','tl.peak':'市场峰值反应',
+'region.middle_east':'中东','region.europe':'欧洲','region.asia':'亚太','region.americas':'美洲','region.africa':'非洲',
+}};
+let LANG='en';
+function t(k){return(I18N[LANG]&&I18N[LANG][k])||I18N.en[k]||k}
+function setLang(l){LANG=l;localStorage.setItem('gw_lang',l);document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('on',b.dataset.lang===l));document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});renderFeed();renderLatency();updateRisk();populateFilters();if(activeView==='replay')renderScenarios();if(activeView==='heatmap')renderHeatmap()}
+
+/* ═══════════════════════ DEMO DATA ═══════════════════════ */
+const now=Date.now();
+const EVENTS=[
+{id:1,type:'military',lat:15.5,lng:43.2,title:{en:'Houthi Forces Launch Anti-Ship Missiles Near Bab el-Mandeb',zh:'胡塞武装在曼德海峡附近发射反舰导弹'},summary:{en:'Two commercial vessels report near-miss incidents. Maritime traffic rerouting around Cape of Good Hope confirmed.',zh:'两艘商船报告险遭袭击。已确认海运改道好望角。'},source:'Maritime AIS',cred:4,assets:['CL','BRN','SHIP'],score:9,dir:'bullish',conf:87,region:'middle_east',time:now-180000},
+{id:2,type:'military',lat:33.3,lng:44.4,title:{en:'U.S. Carrier Strike Group Repositions to Persian Gulf',zh:'美国航母战斗群重新部署至波斯湾'},summary:{en:'USS Eisenhower carrier group transiting Strait of Hormuz. Iranian naval assets on heightened alert.',zh:'艾森豪威尔号航母编队通过霍尔木兹海峡。伊朗海军进入高度戒备。'},source:'Satellite',cred:5,assets:['CL','GC','DXY'],score:8,dir:'bullish',conf:78,region:'middle_east',time:now-420000},
+{id:3,type:'supply',lat:30.0,lng:32.5,title:{en:'Suez Canal Transit Delays Reach 72 Hours',zh:'苏伊士运河通行延误达72小时'},summary:{en:'Backlog of 80+ vessels building at canal entrance. Container shipping rates surge 15% intraday.',zh:'运河入口积压80+船只。集装箱运费日内飙升15%。'},source:'PR Wire',cred:4,assets:['CL','BRN'],score:8,dir:'bullish',conf:82,region:'middle_east',time:now-600000},
+{id:4,type:'policy',lat:50.85,lng:4.35,title:{en:'EU Announces Emergency Sanctions Package on Russian LNG',zh:'欧盟宣布对俄罗斯LNG实施紧急制裁'},summary:{en:'New restrictions target LNG transshipment hubs. European natural gas futures spike on announcement.',zh:'新限制针对LNG转运枢纽。欧洲天然气期货闻讯飙升。'},source:'PR Wire',cred:5,assets:['NG','TTF'],score:8,dir:'bullish',conf:85,region:'europe',time:now-900000},
+{id:5,type:'military',lat:24.5,lng:121.0,title:{en:'PLA Navy Conducts Live-Fire Exercises Near Taiwan Median Line',zh:'解放军海军在台湾海峡中线附近进行实弹演习'},summary:{en:'Six warships and 30+ aircraft detected. TSMC shares down 3% in pre-market.',zh:'侦测到6艘军舰及30+架军机。台积电盘前下跌3%。'},source:'Satellite',cred:5,assets:['TSM','BTC','SOX'],score:9,dir:'bearish',conf:80,region:'asia',time:now-1500000},
+{id:6,type:'disaster',lat:34.0,lng:135.0,title:{en:'Magnitude 6.8 Earthquake Hits Central Japan Near Semiconductor Clusters',zh:'日本中部半导体产业集群附近发生6.8级地震'},summary:{en:'Multiple fabrication facilities report precautionary shutdowns. Memory chip supply disruption expected.',zh:'多家晶圆厂报告预防性停产。预计存储芯片供应中断。'},source:'USGS',cred:5,assets:['MU','DRAM','SOX'],score:7,dir:'bearish',conf:72,region:'asia',time:now-2100000},
+{id:7,type:'policy',lat:38.9,lng:-77.0,title:{en:'SEC Announces New Crypto Staking Regulatory Framework',zh:'SEC公布新加密质押监管框架'},summary:{en:'Proof-of-stake tokens classified as securities. Ethereum and Solana lead market selloff.',zh:'权益证明代币被归类为证券。以太坊和Solana领跌。'},source:'PR Wire',cred:5,assets:['ETH','SOL','BTC'],score:7,dir:'bearish',conf:76,region:'americas',time:now-2700000},
+{id:8,type:'supply',lat:51.9,lng:31.3,title:{en:'Russian Drone Strike Damages Ukrainian Black Sea Grain Terminal',zh:'俄罗斯无人机袭击损毁乌克兰黑海粮食码头'},summary:{en:'Odesa grain export terminal partially destroyed. Wheat futures limit up on CBOT.',zh:'敖德萨粮食出口码头部分被毁。CBOT小麦期货涨停。'},source:'Telegram',cred:3,assets:['WHEAT','CORN'],score:8,dir:'bullish',conf:83,region:'europe',time:now-3300000},
+{id:9,type:'military',lat:26.0,lng:56.0,title:{en:'Iranian IRGC Seizes Oil Tanker in Strait of Hormuz',zh:'伊朗革命卫队在霍尔木兹海峡扣押油轮'},summary:{en:'Marshall Islands-flagged tanker carrying 1M barrels diverted to Bandar Abbas. Oil jumps $3/bbl.',zh:'马绍尔群岛旗油轮载100万桶原油被转向阿巴斯港。油价跳涨3美元/桶。'},source:'Maritime AIS',cred:4,assets:['CL','BRN','GC'],score:9,dir:'bullish',conf:90,region:'middle_east',time:now-3900000},
+{id:10,type:'policy',lat:23.1,lng:113.3,title:{en:'China PBoC Signals Emergency Rate Cut Amid Property Crisis',zh:'中国央行因房地产危机释放紧急降息信号'},summary:{en:'50bps rate cut expected next week. USD/CNY rises above 7.35. Copper futures decline.',zh:'预计下周降息50个基点。美元/人民币升破7.35。铜期货下跌。'},source:'PR Wire',cred:4,assets:['CNY','HG','FXI'],score:7,dir:'bearish',conf:74,region:'asia',time:now-4500000},
+{id:11,type:'disaster',lat:14.5,lng:121.0,title:{en:'Super Typhoon Threatens Philippines LNG Import Terminal',zh:'超级台风威胁菲律宾LNG进口终端'},summary:{en:'Category 5 typhoon on track for Batangas LNG hub. Asian LNG spot prices surge 8%.',zh:'5级台风直奔八打雁LNG枢纽。亚洲LNG现货价格飙升8%。'},source:'Weather',cred:5,assets:['NG','LNG'],score:6,dir:'bullish',conf:68,region:'asia',time:now-5100000},
+{id:12,type:'supply',lat:5.6,lng:-0.2,title:{en:'West African Port Workers Strike Disrupts Cocoa Exports',zh:'西非港口工人罢工扰乱可可出口'},summary:{en:'Ghana\'s Tema port suspended operations. Cocoa futures hit 12-month high.',zh:'加纳特马港暂停运营。可可期货创12个月新高。'},source:'PR Wire',cred:3,assets:['CC','COCOA'],score:5,dir:'bullish',conf:65,region:'africa',time:now-5700000},
+{id:13,type:'military',lat:39.0,lng:125.8,title:{en:'North Korea Launches ICBM Over Sea of Japan',zh:'朝鲜向日本海发射洲际弹道导弹'},summary:{en:'Missile flew 4,500km before splashing down. Japanese Yen strengthens as safe-haven flows increase.',zh:'导弹飞行4500公里后坠入海中。日元因避险资金流入而走强。'},source:'Satellite',cred:5,assets:['GC','JPY','NIKKEI'],score:8,dir:'bullish',conf:79,region:'asia',time:now-6300000},
+{id:14,type:'policy',lat:8.0,lng:-66.0,title:{en:'U.S. Lifts Partial Oil Sanctions on Venezuela',zh:'美国部分解除对委内瑞拉石油制裁'},summary:{en:'Chevron authorized to expand operations. Additional 200k bpd expected to reach market within 6 months.',zh:'雪佛龙获授权扩大运营。预计6个月内额外20万桶/日进入市场。'},source:'PR Wire',cred:5,assets:['CL','CVX'],score:6,dir:'bearish',conf:71,region:'americas',time:now-6900000},
+{id:15,type:'supply',lat:27.0,lng:17.0,title:{en:'Libya\'s Es Sider Oil Port Forced to Close Amid Militia Clashes',zh:'利比亚锡德尔石油港因民兵冲突被迫关闭'},summary:{en:'400k bpd capacity offline. Brent crude spikes 2.5% on supply concerns.',zh:'40万桶/日产能停摆。布伦特原油因供应担忧飙升2.5%。'},source:'Telegram',cred:3,assets:['BRN','CL'],score:7,dir:'bullish',conf:77,region:'africa',time:now-7500000}
+];
+
+const EXTRA_EVENTS=[
+{id:101,type:'military',lat:46.2,lng:33.5,title:{en:'Explosion Reported Near Crimean Bridge',zh:'克里米亚大桥附近报告爆炸'},summary:{en:'Satellite imagery confirms damage to one lane. Russian forces begin alternative routing.',zh:'卫星图像确认一条车道受损。俄军开始替代路线。'},source:'Satellite',cred:4,assets:['NG','WHEAT','RUB'],score:7,dir:'bullish',conf:74,region:'europe',time:0},
+{id:102,type:'policy',lat:25.3,lng:51.5,title:{en:'OPEC+ Emergency Meeting Called for Production Cuts',zh:'OPEC+召开紧急会议讨论减产'},summary:{en:'Saudi Arabia pushing for additional 1M bpd cut. Crude futures jump on headline.',zh:'沙特推动额外减产100万桶/日。原油期货闻讯跳涨。'},source:'PR Wire',cred:4,assets:['CL','BRN'],score:8,dir:'bullish',conf:84,region:'middle_east',time:0},
+{id:103,type:'disaster',lat:37.5,lng:127.0,title:{en:'Flooding Disrupts Samsung Semiconductor Fab in South Korea',zh:'洪水扰乱三星韩国半导体工厂'},summary:{en:'Pyeongtaek mega-fab reports water intrusion. NAND flash spot prices up 5%.',zh:'平泽超级晶圆厂报告进水。NAND闪存现货价格上涨5%。'},source:'PR Wire',cred:4,assets:['SSNLF','MU','SOX'],score:6,dir:'bearish',conf:68,region:'asia',time:0},
+{id:104,type:'supply',lat:61.5,lng:5.3,title:{en:'Norwegian Gas Pipeline Maintenance Extended by 2 Weeks',zh:'挪威天然气管道维护延长2周'},summary:{en:'Langeled pipeline capacity reduced 30%. European TTF gas futures rally.',zh:'朗厄莱德管道产能减少30%。欧洲TTF天然气期货上涨。'},source:'PR Wire',cred:5,assets:['NG','TTF'],score:6,dir:'bullish',conf:78,region:'europe',time:0}
+];
+
+/* ═══ Historical Scenarios ═══ */
+const SCENARIOS=[
+{id:'red_sea',title:{en:'2024 Red Sea Crisis',zh:'2024红海危机'},desc:{en:'Houthi attacks on commercial shipping force global rerouting via Cape of Good Hope',zh:'胡塞武装袭击商船迫使全球航运改道好望角'},asset:'Brent Crude',gain:'+4.8%',gainNum:4.8,signal:'14:32:07',bbTime:'14:51:23',peak:'09:15:00',leadMin:19,
+timeline:[{t:'14:32',k:'tl.detected',s:true},{t:'14:38',k:'Maritime AIS confirms vessel evasion'},{t:'14:51',k:'tl.bb'},{t:'15:20',k:'Reuters reports'},{t:'09:15+1d',k:'tl.peak',p:true}],
+prices:[78.2,78.5,78.3,79.1,80.4,81.2,81.8,82.0,81.5,82.3,83.1,83.6,82.9,82.1,81.8,82.5,83.2,84.0,83.5,82.8,82.0,81.5,81.2,81.8,82.4,83.0,82.6,82.1,81.7,82.0]},
+{id:'taiwan',title:{en:'2025 Taiwan Strait Exercises',zh:'2025台海军演'},desc:{en:'PLA conducts largest military drills since 2022. Semiconductor supply chain fears spike.',zh:'解放军进行2022年以来最大规模军演。半导体供应链恐慌飙升。'},asset:'TSM (ADR)',gain:'-11.6%',gainNum:-11.6,signal:'06:15:42',bbTime:'06:48:11',peak:'11:30:00',leadMin:32,
+timeline:[{t:'06:15',k:'tl.detected',s:true},{t:'06:22',k:'Satellite confirms naval deployment'},{t:'06:48',k:'tl.bb'},{t:'07:10',k:'Pentagon briefing'},{t:'11:30',k:'tl.peak',p:true}],
+prices:[185,184,183,180,176,172,168,165,164,163,162,160,158,156,155,157,159,161,163,164,166,168,170,172,174,175,173,171,169,168]},
+{id:'grain',title:{en:'Russia-Ukraine Grain Deal Collapse',zh:'俄乌粮食协议破裂'},desc:{en:'Russia withdraws from Black Sea grain corridor. Global food security fears escalate.',zh:'俄罗斯退出黑海粮食走廊。全球粮食安全担忧升级。'},asset:'Wheat Futures',gain:'+14.2%',gainNum:14.2,signal:'03:22:18',bbTime:'03:45:55',peak:'14:00:00',leadMin:23,
+timeline:[{t:'03:22',k:'tl.detected',s:true},{t:'03:30',k:'Telegram channels confirm'},{t:'03:45',k:'tl.bb'},{t:'06:00',k:'UN Security Council session'},{t:'14:00',k:'tl.peak',p:true}],
+prices:[680,682,685,695,710,725,740,755,770,778,785,790,788,782,775,770,765,760,755,752,750,748,745,742,740,738,736,734,732,730]},
+{id:'iran',title:{en:'2024 Iran-Israel Escalation',zh:'2024伊以冲突升级'},desc:{en:'Direct drone and missile exchanges between Iran and Israel trigger global risk-off.',zh:'伊朗与以色列直接进行无人机和导弹互攻触发全球避险。'},asset:'Gold (XAU)',gain:'+3.7%',gainNum:3.7,signal:'22:08:33',bbTime:'22:31:05',peak:'10:45:00',leadMin:22,
+timeline:[{t:'22:08',k:'tl.detected',s:true},{t:'22:15',k:'ADS-B tracks air defense activation'},{t:'22:31',k:'tl.bb'},{t:'23:00',k:'White House statement'},{t:'10:45+1d',k:'tl.peak',p:true}],
+prices:[2320,2325,2330,2345,2360,2375,2390,2400,2410,2418,2425,2430,2428,2422,2415,2410,2405,2400,2395,2390,2388,2385,2382,2380,2378,2376,2374,2372,2370,2368]}
+];
+
+/* ═══ Correlation Heatmap Data ═══ */
+const HM_EVENTS_EN=['Military\nConflict','Economic\nSanctions','Supply Chain\nDisruption','Natural\nDisaster','Regulatory\nPolicy'];
+const HM_EVENTS_ZH=['军事冲突','经济制裁','供应链中断','自然灾害','监管政策'];
+const HM_ASSETS=['WTI Crude','Brent','Gold','Nat Gas','BTC','USD Index'];
+const HM_DATA=[
+[3.2,3.8,2.1,1.4,-1.5,-0.8],
+[2.8,3.1,1.6,2.2,-2.1,1.2],
+[4.1,4.5,0.8,5.3,-0.6,-0.3],
+[0.5,0.4,0.3,1.8,-0.4,0.1],
+[-0.3,-0.2,0.6,0.4,-3.7,0.9]
+];
+const HM_COUNTS=[[47,47,47,47,47,47],[35,35,35,35,35,35],[52,52,52,52,52,52],[28,28,28,28,28,28],[41,41,41,41,41,41]];
+
+/* ═══ Latency Demo Data ═══ */
+const LAT_HISTORY=[
+{gw:'14:32:07',bb:'14:51:23',lead:1156},{gw:'06:15:42',bb:'06:48:11',lead:1949},{gw:'03:22:18',bb:'03:45:55',lead:1417},
+{gw:'22:08:33',bb:'22:31:05',lead:1352},{gw:'11:44:12',bb:'12:06:50',lead:1358},{gw:'09:02:55',bb:'09:28:17',lead:1522}
+];
+
+/* ═══════════════════════ STATE ═══════════════════════ */
+let activeView='radar';
+let mapObj,markers=[];
+let replayChart,heatmapChart;
+let selectedScenario=null;
+let liveEvents=[...EVENTS];
+let extraIdx=0;
+
+/* ═══════════════════════ MAP ═══════════════════════ */
+function initMap(){
+  mapObj=L.map('map',{zoomControl:true,attributionControl:false,minZoom:2,maxZoom:8}).setView([28,35],3);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(mapObj);
+  L.control.attribution({prefix:false,position:'bottomright'}).addAttribution('<span style="color:rgba(255,255,255,0.3);font-size:9px">Alva OSINT</span>').addTo(mapObj);
+  liveEvents.forEach(ev=>addMarker(ev));
+  setTimeout(()=>mapObj.invalidateSize(),200);
+}
+
+function addMarker(ev){
+  const icon=L.divIcon({className:'',html:'<div class="pulse-marker '+ev.type+'"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+  const m=L.marker([ev.lat,ev.lng],{icon}).addTo(mapObj);
+  const title=ev.title[LANG]||ev.title.en;
+  const summary=ev.summary[LANG]||ev.summary.en;
+  m.bindPopup(`<div style="min-width:220px"><b style="font-size:13px">${title}</b><p style="margin:6px 0;color:rgba(255,255,255,0.6);font-size:11px">${summary}</p><div style="display:flex;gap:8px;font-size:11px"><span>${t('popup.score')}: <b style="color:var(--alva)">${ev.score}/10</b></span><span>${t('popup.dir')}: <b style="color:${ev.dir==='bullish'?'var(--bull)':'var(--bear)'}">${t('dir.'+ev.dir.slice(0,4))}</b> ${ev.conf}%</span></div><div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">${ev.assets.map(a=>'<span style="background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;font-size:10px">'+a+'</span>').join('')}</div></div>`,{maxWidth:280});
+  m._evId=ev.id;
+  markers.push(m);
+}
+
+/* ═══════════════════════ FEED ═══════════════════════ */
+function populateFilters(){
+  const assets=new Set();const regions=new Set();
+  liveEvents.forEach(ev=>{ev.assets.forEach(a=>assets.add(a));regions.add(ev.region)});
+  const fA=document.getElementById('fAsset');const curA=fA.value;
+  fA.innerHTML='<option value="all">'+t('f.allAssets')+'</option>';
+  [...assets].sort().forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;fA.appendChild(o)});
+  fA.value=curA||'all';
+  const fR=document.getElementById('fRegion');const curR=fR.value;
+  fR.innerHTML='<option value="all">'+t('f.allRegions')+'</option>';
+  [...regions].sort().forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=t('region.'+r)||r;fR.appendChild(o)});
+  fR.value=curR||'all';
+}
+
+function renderFeed(){
+  const fA=document.getElementById('fAsset').value;
+  const fR=document.getElementById('fRegion').value;
+  const fS=parseInt(document.getElementById('fScore').value)||0;
+  let filtered=[...liveEvents].filter(ev=>{
+    if(fA!=='all'&&!ev.assets.includes(fA))return false;
+    if(fR!=='all'&&ev.region!==fR)return false;
+    if(ev.score<fS)return false;
+    return true;
+  }).sort((a,b)=>{
+    if(a.score>=7&&b.score<7)return -1;
+    if(b.score>=7&&a.score<7)return 1;
+    return b.time-a.time;
+  });
+  const list=document.getElementById('feedList');
+  list.innerHTML=filtered.map(ev=>{
+    const title=ev.title[LANG]||ev.title.en;
+    const summary=ev.summary[LANG]||ev.summary.en;
+    const ago=fmtAgo(ev.time);
+    const stars='★'.repeat(ev.cred)+'☆'.repeat(5-ev.cred);
+    return `<div class="ev-card${ev.score>=7?' hot':''}" onclick="focusEvent(${ev.id})">
+      <div class="ev-top"><div class="ev-dot ${ev.type}"></div><span class="ev-time">${ago}</span><span class="ev-src">${ev.source}</span><span class="ev-stars">${stars}</span></div>
+      <div class="ev-title">${title}</div>
+      <div class="ev-summary">${summary}</div>
+      <div class="ev-meta">${ev.assets.map(a=>'<span class="ev-asset">'+a+'</span>').join('')}<span class="ev-score">⚡ ${ev.score}/10</span><span class="ev-dir ${ev.dir==='bullish'?'bull':'bear'}">${t('dir.'+ev.dir.slice(0,4))} ${ev.conf}%</span></div>
+    </div>`;
+  }).join('');
+  document.getElementById('feedCount').textContent=filtered.length+'/'+liveEvents.length;
+  document.getElementById('statTotal').textContent=liveEvents.length;
+  document.getElementById('statHigh').textContent=liveEvents.filter(e=>e.score>=7).length;
+}
+
+function focusEvent(id){
+  const ev=liveEvents.find(e=>e.id===id);if(!ev)return;
+  mapObj.flyTo([ev.lat,ev.lng],5,{duration:1});
+  const m=markers.find(mk=>mk._evId===id);if(m)m.openPopup();
+}
+
+function fmtAgo(ts){
+  const d=Math.floor((now-ts)/1000);
+  if(d<60)return d+'s ago';
+  if(d<3600)return Math.floor(d/60)+'m ago';
+  if(d<86400)return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+
+/* ═══════════════════════ RISK ═══════════════════════ */
+function updateRisk(){
+  const recent=liveEvents.filter(e=>(now-e.time)<86400000);
+  const wScore=recent.reduce((s,e)=>s+e.score*e.score,0);
+  let level,pct,color;
+  if(wScore>500){level='EXTREME';pct=95;color='var(--mil)'}
+  else if(wScore>300){level='HIGH';pct=72;color='var(--emph)'}
+  else if(wScore>150){level='MEDIUM';pct=45;color='var(--alert)'}
+  else{level='LOW';pct=20;color='var(--bull)'}
+  const badge=document.getElementById('riskBadge');
+  badge.textContent=level;badge.className='risk-badge risk-'+level.toLowerCase();
+  const fill=document.getElementById('gaugeFill');fill.style.height=pct+'%';fill.style.background=color;
+  const gl=document.getElementById('gaugeLevel');gl.textContent=level;gl.style.color=color;
+}
+
+/* ═══════════════════════ LATENCY ═══════════════════════ */
+function renderLatency(){
+  const latest=LAT_HISTORY[0];
+  document.getElementById('latGW').textContent=latest.gw;
+  document.getElementById('latBB').textContent=latest.bb;
+  const m=Math.floor(latest.lead/60),s=latest.lead%60;
+  document.getElementById('latLead').textContent='+'+m+'m '+s.toString().padStart(2,'0')+'s';
+  document.getElementById('raceGW').style.width='95%';
+  document.getElementById('raceBB').style.width=(95-m*1.5)+'%';
+  document.getElementById('raceRT').style.width=(95-m*1.5-8)+'%';
+  const avgS=Math.round(LAT_HISTORY.reduce((s,l)=>s+l.lead,0)/LAT_HISTORY.length);
+  const maxS=Math.max(...LAT_HISTORY.map(l=>l.lead));
+  document.getElementById('latAvg').textContent=Math.floor(avgS/60)+'m '+String(avgS%60).padStart(2,'0')+'s';
+  document.getElementById('latMax').textContent=Math.floor(maxS/60)+'m '+String(maxS%60).padStart(2,'0')+'s';
+  document.getElementById('latCnt').textContent='342';
+}
+
+/* ═══════════════════════ REPLAY ═══════════════════════ */
+function renderScenarios(){
+  document.getElementById('scenarioList').innerHTML=SCENARIOS.map(sc=>`
+    <div class="scenario-card${selectedScenario===sc.id?' on':''}" onclick="selectScenario('${sc.id}')">
+      <div class="sc-title">${sc.title[LANG]||sc.title.en}</div>
+      <div class="sc-sub">${sc.desc[LANG]||sc.desc.en}</div>
+      <div class="sc-gain">${sc.asset}: <span style="color:${sc.gainNum>=0?'var(--bull)':'var(--bear)'}">${sc.gain}</span></div>
+    </div>
+  `).join('');
+}
+
+function selectScenario(id){
+  selectedScenario=id;
+  renderScenarios();
+  const sc=SCENARIOS.find(s=>s.id===id);if(!sc)return;
+  document.getElementById('replayTitle').textContent=sc.asset+' — '+(sc.title[LANG]||sc.title.en);
+  document.getElementById('riGain').textContent=sc.gain;
+  document.getElementById('riGain').className='ri-val '+(sc.gainNum>=0?'pos':'neg');
+  document.getElementById('riGainDetail').textContent=t('sc.entry')+': '+sc.signal+' → '+t('sc.peak')+': '+sc.peak;
+  document.getElementById('riLead').textContent='+'+sc.leadMin+'m';
+  const tl=document.getElementById('riTimeline');
+  tl.innerHTML=sc.timeline.map(item=>{
+    const cls=item.s?'signal':(item.p?'peak':'');
+    const text=I18N[LANG][item.k]||item.k;
+    return `<div class="tl-item ${cls}"><span class="tl-time">${item.t}</span><span class="tl-text">${text}</span></div>`;
+  }).join('');
+  renderReplayChart(sc);
+}
+
+function renderReplayChart(sc){
+  if(!replayChart)replayChart=echarts.init(document.getElementById('replayChart'),null,{renderer:'canvas'});
+  const x=sc.prices.map((_,i)=>'T'+(i<10?'-'+(10-i):i===10?'':'+' +(i-10)));
+  const signalIdx=10;const peakIdx=sc.prices.indexOf(sc.gainNum>=0?Math.max(...sc.prices):Math.min(...sc.prices));
+  const color=sc.gainNum>=0?'#2a9b7d':'#e05357';
+  const opt={
+    grid:{top:30,right:20,bottom:30,left:20,containLabel:true},
+    xAxis:{type:'category',data:x,boundaryGap:false,axisLine:{show:false},axisTick:{show:false},axisLabel:{fontSize:10,color:'rgba(255,255,255,0.5)',fontFamily:"'Delight',-apple-system,sans-serif"},splitLine:{show:false}},
+    yAxis:{type:'value',axisLine:{show:false},axisTick:{show:false},axisLabel:{fontSize:10,color:'rgba(255,255,255,0.5)',fontFamily:"'Delight',-apple-system,sans-serif"},splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}},
+    tooltip:{trigger:'axis',backgroundColor:'rgba(20,25,40,0.95)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,textStyle:{color:'rgba(255,255,255,0.9)',fontFamily:"'Delight',-apple-system,sans-serif",fontSize:12}},
+    series:[{type:'line',data:sc.prices,smooth:0.2,lineStyle:{width:2,color},showSymbol:false,symbol:'circle',symbolSize:10,emphasis:{itemStyle:{borderColor:'#fff',borderWidth:1,color}},
+      areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:color+'40'},{offset:1,color:color+'00'}])},
+      markLine:{silent:true,symbol:'none',data:[{xAxis:signalIdx,label:{show:true,formatter:'⚡ Signal',color:'var(--alva)',fontSize:10,position:'start'},lineStyle:{color:'#49a3a6',type:[4,3],width:1}},{xAxis:peakIdx>=0?peakIdx:15,label:{show:true,formatter:'🏁 Peak',color:color,fontSize:10,position:'start'},lineStyle:{color:color,type:[4,3],width:1}}]}
+    }]
+  };
+  replayChart.setOption(opt,true);
+}
+
+/* ═══════════════════════ HEATMAP ═══════════════════════ */
+function renderHeatmap(){
+  if(!heatmapChart)heatmapChart=echarts.init(document.getElementById('heatmapChart'),null,{renderer:'canvas'});
+  const evLabels=LANG==='zh'?HM_EVENTS_ZH:HM_EVENTS_EN;
+  const data=[];let mn=-5,mx=5;
+  HM_DATA.forEach((row,i)=>row.forEach((v,j)=>{data.push([j,i,v]);if(v<mn)mn=v;if(v>mx)mx=v}));
+  const opt={
+    grid:{top:30,right:20,bottom:80,left:120,containLabel:false},
+    xAxis:{type:'category',data:HM_ASSETS,position:'bottom',axisLine:{show:false},axisTick:{show:false},axisLabel:{fontSize:11,color:'rgba(255,255,255,0.7)',fontFamily:"'Delight',-apple-system,sans-serif",rotate:0},splitLine:{show:false}},
+    yAxis:{type:'category',data:evLabels,axisLine:{show:false},axisTick:{show:false},axisLabel:{fontSize:11,color:'rgba(255,255,255,0.7)',fontFamily:"'Delight',-apple-system,sans-serif"},splitLine:{show:false}},
+    visualMap:{min:-5,max:5,show:false,inRange:{color:['#e05357','#5a2020','#1a1a2e','#1a3a2a','#2a9b7d']}},
+    tooltip:{backgroundColor:'rgba(20,25,40,0.95)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,textStyle:{color:'rgba(255,255,255,0.9)',fontFamily:"'Delight',-apple-system,sans-serif",fontSize:12},
+      formatter:function(p){
+        const ei=p.data[1],ai=p.data[0],v=p.data[2];
+        const evName=evLabels[ei].replace('\n',' ');
+        const cnt=HM_COUNTS[ei][ai];
+        const dir=v>=0?(LANG==='zh'?'看涨':'Bullish'):(LANG==='zh'?'看跌':'Bearish');
+        return `<b>${evName} → ${HM_ASSETS[ai]}</b><br/>${(LANG==='zh'?'平均变动':'Avg Change')}: <span style="color:${v>=0?'#2a9b7d':'#e05357'}">${v>=0?'+':''}${v.toFixed(1)}%</span><br/>${dir} · ${cnt} ${LANG==='zh'?'次事件':'events'}`;
+      }
+    },
+    series:[{type:'heatmap',data:data,itemStyle:{borderColor:'rgba(10,14,26,0.8)',borderWidth:2,borderRadius:3},emphasis:{itemStyle:{borderColor:'#fff',borderWidth:2}},label:{show:true,formatter:p=>(p.data[2]>=0?'+':'')+p.data[2].toFixed(1)+'%',fontSize:11,fontWeight:500,fontFamily:"'Delight',-apple-system,sans-serif",color:'rgba(255,255,255,0.85)'}}]
+  };
+  heatmapChart.setOption(opt,true);
+}
+
+/* ═══════════════════════ VIEW SWITCHING ═══════════════════════ */
+function switchView(v){
+  activeView=v;
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
+  document.getElementById('v'+v.charAt(0).toUpperCase()+v.slice(1)).classList.add('on');
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  if(v==='radar')setTimeout(()=>mapObj.invalidateSize(),100);
+  if(v==='replay'){renderScenarios();if(selectedScenario&&replayChart)replayChart.resize()}
+  if(v==='heatmap'){renderHeatmap();setTimeout(()=>heatmapChart&&heatmapChart.resize(),100)}
+}
+
+/* ═══════════════════════ SIMULATE NEW EVENTS ═══════════════════════ */
+function simulateNewEvent(){
+  if(extraIdx>=EXTRA_EVENTS.length)extraIdx=0;
+  const ev={...EXTRA_EVENTS[extraIdx],time:Date.now(),id:200+Date.now()};
+  extraIdx++;
+  liveEvents.unshift(ev);
+  addMarker(ev);
+  renderFeed();
+  updateRisk();
+  const card=document.querySelector('.ev-card');
+  if(card){card.style.background='rgba(73,163,166,0.08)';setTimeout(()=>card.style.background='',2000)}
+}
+
+/* ═══════════════════════ INIT ═══════════════════════ */
+function init(){
+  const savedLang=localStorage.getItem('gw_lang');
+  if(savedLang)setLang(savedLang);
+  initMap();
+  populateFilters();
+  renderFeed();
+  updateRisk();
+  renderLatency();
+  setInterval(simulateNewEvent,45000);
+  window.addEventListener('resize',()=>{
+    if(replayChart)replayChart.resize();
+    if(heatmapChart)heatmapChart.resize();
+    if(mapObj)mapObj.invalidateSize();
+  });
+}
+init();
+</script>
+</body>
+</html>
